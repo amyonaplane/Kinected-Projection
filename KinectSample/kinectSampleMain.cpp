@@ -64,15 +64,17 @@ int main (int argc, char *argv[]) {
 				//imshow("Depth", depth);
 
 				//show single image
-				Mat im = imread("sphere1v.png");
+				Mat im = imread("sphere1vhold.png");
 				cvtColor(im, grey, CV_BGR2GRAY);
 				//Hough Circles or SimpleBlobDetector?
 				vector<Vec3f> circles;
-				HoughCircles(grey, circles, HOUGH_GRADIENT, 1, 12, 1, 20);
-				Point center(cvRound(circles[0][0]), cvRound(circles[0][1]));
-				int radius =cvRound(circles[0][2]);
-				circle(grey, center, 3, Scalar(0,255,0),-1,8,0);
-				circle(grey, center, radius, Scalar(0,0,255),3,8,0);
+				HoughCircles(grey, circles, HOUGH_GRADIENT, 1, 20, 30, 15, 20, 50);
+				for(int i=0; i<circles.size();i++){
+					Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+					int radius =cvRound(circles[i][2]);
+					circle(grey, center, 3, Scalar(0,255,0),-1,8,0);
+					circle(grey, center, radius, Scalar(0,0,255),3,8,0);
+				}
 				imshow("keypoints", grey);
 
 				int keyPressed = cv::waitKey(1);
@@ -128,7 +130,7 @@ int main (int argc, char *argv[]) {
 					out.close();
 
 				} else if (keyPressed == 'a' || keyPressed == 'A') {
-					kinect.setAngle(angle+2);
+					kinect.setAngle(angle+2.0);
 					angle = kinect.getAngle();
 					std::cout << "Angle increased to " << angle << std::endl;
 				} else if (keyPressed == 'z' || keyPressed == 'Z') {
