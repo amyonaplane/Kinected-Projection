@@ -53,8 +53,8 @@ int main (int argc, char *argv[]) {
 
 				/*grey video feed*/
 				Mat grey; 
-				//cvtColor(video, grey, CV_BGR2GRAY);
-
+				cvtColor(video, grey, CV_BGR2GRAY);
+				GaussianBlur(grey, grey, Size(7,7), 2, 2);
 				/*smooth and define depth feed*/
 				//Mat dil, dil2;
 				//erode(depth,dil,Mat(), Point(-1,-1), 4);
@@ -64,11 +64,11 @@ int main (int argc, char *argv[]) {
 				//imshow("Depth", depth);
 
 				//show single image
-				Mat im = imread("sphere1vhold.png");
-				cvtColor(im, grey, CV_BGR2GRAY);
+				//Mat im = imread("sphere1vfar.png");
+				//cvtColor(im, grey, CV_BGR2GRAY);
 				//Hough Circles or SimpleBlobDetector?
 				vector<Vec3f> circles;
-				HoughCircles(grey, circles, HOUGH_GRADIENT, 1, 20, 30, 15, 20, 50);
+				HoughCircles(grey, circles, HOUGH_GRADIENT, 1, grey.rows/8, 65, 65, 0, 0);//grey.rows = 480 aka img height; 55 30 20 50 radius
 				for(int i=0; i<circles.size();i++){
 					Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
 					int radius =cvRound(circles[i][2]);
