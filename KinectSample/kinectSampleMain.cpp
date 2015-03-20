@@ -53,8 +53,10 @@ int main (int argc, char *argv[]) {
 
 				/*grey video feed*/
 				Mat grey; 
-				cvtColor(video, grey, CV_BGR2GRAY);
-				GaussianBlur(grey, grey, Size(7,7), 2, 2);
+				//cvtColor(video, grey, CV_BGR2GRAY);
+				//Mat im=
+				//GaussianBlur(grey, grey, Size(5,5), 2, 2);
+				//threshold(grey,grey,75,100, THRESH_BINARY);
 				/*smooth and define depth feed*/
 				//Mat dil, dil2;
 				//erode(depth,dil,Mat(), Point(-1,-1), 4);
@@ -63,18 +65,22 @@ int main (int argc, char *argv[]) {
 				//imshow("Video", video);
 				//imshow("Depth", depth);
 
-				//show single image
-				//Mat im = imread("sphere1vfar.png");
-				//cvtColor(im, grey, CV_BGR2GRAY);
-				//Hough Circles or SimpleBlobDetector?
-				vector<Vec3f> circles;
-				HoughCircles(grey, circles, HOUGH_GRADIENT, 1, grey.rows/8, 65, 65, 0, 0);//grey.rows = 480 aka img height; 55 30 20 50 radius
+				//show single image and use simpleblobdetector
+				Mat im = imread("sphere1dbody.png");
+				cvtColor(im, grey, CV_BGR2GRAY);
+				SimpleBlobDetector detector;
+				vector<KeyPoint> kp;
+				detector.detect(grey,kp);
+				drawKeypoints(grey,kp,grey, Scalar(0,0,255));
+				//GaussianBlur(grey, grey, Size(5,5), 2, 2);
+				/*vector<Vec3f> circles;
+				HoughCircles(grey, circles, HOUGH_GRADIENT, 1, grey.rows/8, 65, 75, 0, 0);//grey.rows = 480 aka img height; 55 30 20 50 radius
 				for(int i=0; i<circles.size();i++){
 					Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
 					int radius =cvRound(circles[i][2]);
 					circle(grey, center, 3, Scalar(0,255,0),-1,8,0);
 					circle(grey, center, radius, Scalar(0,0,255),3,8,0);
-				}
+				}*/
 				imshow("keypoints", grey);
 
 				int keyPressed = cv::waitKey(1);
@@ -84,7 +90,7 @@ int main (int argc, char *argv[]) {
 				} else if (keyPressed == ' ') {
 					
 					sprintf_s(fname, 100, "image%04d.png", modelNum+1);
-					cv::imwrite(fname, video);
+					cv::imwrite(fname, depth);
 
 					sprintf_s(fname, 100, pattern, modelNum++);
 					std::cout << fname << std::endl;
