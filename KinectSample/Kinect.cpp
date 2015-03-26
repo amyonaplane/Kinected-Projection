@@ -5,7 +5,10 @@
 
 #include <iostream>
 
-std::vector<std::unique_ptr<Kinect>> Kinect::kinects_(0);
+using namespace cv;
+using namespace std;
+
+vector<unique_ptr<Kinect>> Kinect::kinects_(0);
 
 size_t Kinect::count() {
 	int n;
@@ -298,7 +301,7 @@ void Kinect::setDepthMode(DepthMode depthMode) {
 
 }
 
-cv::Point3d Kinect::depth2xyz(const cv::Point2d& depth) {
+Point3d Kinect::depth2xyz(const Point2d& depth) {
 	long int dx = depth.x;
 	long int dy = depth.y;
 	unsigned short dd;
@@ -312,15 +315,15 @@ cv::Point3d Kinect::depth2xyz(const cv::Point2d& depth) {
 
 	if (dd > 0) {
 		Vector4 pnt3d = NuiTransformDepthImageToSkeleton(dx, dy, dd, depthResolution_);
-		return cv::Point3d(pnt3d.x, pnt3d.y, pnt3d.z);
+		return Point3d(pnt3d.x, pnt3d.y, pnt3d.z);
 	} else {
-		return cv::Point3d(0,0,-1);
+		return Point3d(0,0,-1);
 	}
 
 	
 }
 
-cv::Point2d Kinect::depth2video(const cv::Point2d& depth) {
+Point2d Kinect::depth2video(const Point2d& depth) {
 	long int dx = depth.x;
 	long int dy = depth.y;
 	unsigned short dd;
@@ -335,8 +338,8 @@ cv::Point2d Kinect::depth2video(const cv::Point2d& depth) {
 	if (dd > 0) {
 		pSensor_->NuiImageGetColorPixelCoordinatesFromDepthPixelAtResolution(
 			videoResolution_, depthResolution_, &videoFrame_.ViewArea, dx, dy, dd, &vx, &vy);
-		return cv::Point2d(vx, vy);
+		return Point2d(vx, vy);
 	} else {
-		return cv::Point2d(-1,-1);
+		return Point2d(-1,-1);
 	}
 }

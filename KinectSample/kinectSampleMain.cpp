@@ -15,14 +15,14 @@ int main (int argc, char *argv[]) {
 
 	char fname[100]; 
 
-	cv::namedWindow("Video");
-	cv::namedWindow("Depth");
+	namedWindow("Video");
+	namedWindow("Depth");
 
-	cv::Mat video(cv::Size(200,200), CV_8UC3);
-	video.setTo(cv::Scalar(128,128,128));
+	Mat video(Size(200,200), CV_8UC3);
+	video.setTo(Scalar(128,128,128));
 
-	cv::Mat depth(cv::Size(200,200), CV_8UC1);
-	depth.setTo(cv::Scalar(128,128,128));
+	cv::Mat depth(Size(200,200), CV_8UC1);
+	depth.setTo(Scalar(128,128,128));
 
 	try {
 
@@ -54,50 +54,52 @@ int main (int argc, char *argv[]) {
 				/*grey video feed*/
 				Mat grey; 
 				cvtColor(video, grey, CV_BGR2GRAY);
-				GaussianBlur(grey, grey, Size(5,5), 2, 2);
-				/*smooth and define depth feed*/
-				//Mat dil, dil2;
-				//erode(depth,dil,Mat(), Point(-1,-1), 4);
-				//dilate(depth, dil2, Mat(), Point(-1,-1),3);
+				GaussianBlur(grey, grey, Size(5,5), 3, 3);
 
-				//imshow("Video", video);
+				imshow("Video", video);
 				//imshow("Depth", depth);
 
 				//show single image and convert to greyscale
-				//Mat im = imread("sphere1dbody.png");
-				cvtColor(video, grey, CV_BGR2GRAY);
-
-				//using simple blob detector
-/*				SimpleBlobDetector detector;
-				vector<KeyPoint> kp;
-				detector.detect(grey,kp);
-				drawKeypoints(grey,kp,grey, Scalar(0,0,255));*/
+				//Mat im = imread("demov2.png");
+				//Mat test = imread("demod2.png");
+				//cvtColor(im, grey, CV_BGR2GRAY);
 
 				//using HoughCircles
 				GaussianBlur(grey, grey, Size(5,5), 2, 2);
 				vector<Vec3f> circles;
 				HoughCircles(grey, circles, HOUGH_GRADIENT, 1, grey.rows/8, 65, 69, 0, 0);//grey.rows = 480 aka img height; 55 30 20 50 radius
 				for(int i=0; i<circles.size();i++){
-					Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-					int radius =cvRound(circles[i][2]);
+					Point2d center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+					int radius=cvRound(circles[i][2]);
+					//transpose points of circle from video feed to depth feed
 					circle(grey, center, 3, Scalar(0,255,0),-1,8,0);
 					circle(grey, center, radius, Scalar(0,0,255),3,8,0);
+					//use depth2xyz on points to get x,y, and depth (z)
+					Point3d p=kinect.depth2xyz(center);
+					cout<<p;
+					//use RANSAC to find three/four points and determine center of square using triangles and distance
+					//find radius, depth and center of sphere
 				}
 				imshow("keypoints", grey);
 
-				int keyPressed = cv::waitKey(1);
+				int keyPressed = waitKey(1);
 
 				if (keyPressed == 'q' || keyPressed == 'Q') {
 					done = true;
-				} else if (keyPressed == ' ') {
+				}
+				else if(keyPressed=='y'){
+					sprintf_s(fname, 100, "imagev%04d.png", modelNum+1);
+					imwrite(fname, video);
+				}
+				else if (keyPressed == ' ') {
 					
 					sprintf_s(fname, 100, "image%04d.png", modelNum+1);
-					cv::imwrite(fname, depth);
+					imwrite(fname, depth);
 
 					sprintf_s(fname, 100, pattern, modelNum++);
-					std::cout << fname << std::endl;
+					cout << fname << endl;
 
-					std::ofstream out(fname);
+					ofstream out(fname);
 					out << "ply\n"
 						<< "format ascii 1.0\n"
 						<< "element dimensions 1\n"
@@ -112,14 +114,14 @@ int main (int argc, char *argv[]) {
 						<< "property uchar blue\n"
 						<< "end_header\n";
 
-					out << 640 << std::endl;
-					out << 480 << std::endl;
+					out << 640 << endl;
+					out << 480 << endl;
 					
-					cv::Point2d p2d;
+					Point2d p2d;
 					for (p2d.x = 0; p2d.x < 640; ++p2d.x) {
 						for (p2d.y = 0; p2d.y < 480; ++p2d.y) {
-							cv::Point3d xyz = kinect.depth2xyz(p2d);
-							cv::Point2d rgb = kinect.depth2video(p2d);
+							Point3d xyz = kinect.depth2xyz(p2d);
+							Point2d rgb = kinect.depth2video(p2d);
 							int ix = int(rgb.x);
 							int iy = int(rgb.y);
 							if (ix < 0 || ix >= video.size().width ||
@@ -129,7 +131,7 @@ int main (int argc, char *argv[]) {
 							} else {
 								out << xyz.x << " " << xyz.y << " " << xyz.z << " ";
 							
-								cv::Vec3b col = video.at<cv::Vec3b>(iy, ix);
+								Vec3b col = video.at<Vec3b>(iy, ix);
 								out << int(col.val[2]) << " " << int(col.val[1]) << " " << int(col.val[1]) << "\n";
 							}
 						}
@@ -140,17 +142,17 @@ int main (int argc, char *argv[]) {
 				} else if (keyPressed == 'a' || keyPressed == 'A') {
 					kinect.setAngle(angle+2.0);
 					angle = kinect.getAngle();
-					std::cout << "Angle increased to " << angle << std::endl;
+					cout << "Angle increased to " << angle << endl;
 				} else if (keyPressed == 'z' || keyPressed == 'Z') {
 					kinect.setAngle(angle-2);
 					angle = kinect.getAngle();
-					std::cout << "Angle decreased to " << angle << std::endl;
+					cout << "Angle decreased to " << angle << endl;
 				}
 			}
 		}
 
 	} catch (kinect_exception) {
-		std::cerr << "Caught an exception" << std::endl;
+		cerr << "Caught an exception" << endl;
 	}
 
 	return 0;
