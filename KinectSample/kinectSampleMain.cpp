@@ -50,51 +50,60 @@ int main (int argc, char *argv[]) {
 			}
 
 			if (haveVideo && haveDepth) {
+				bool vidCirc=false;
+				bool depthCirc=false;
 
-				/*grey video feed*/
-				Mat grey; 
-				depth.convertTo(grey,-1,1.5,1);
-				//cvtColor(video, grey, CV_BGR2GRAY);
+				Mat greyv, greyd; 
+				//depth.convertTo(grey,-1,2,0);
+
+				cvtColor(video, greyv, CV_BGR2GRAY);
 				//cvtColor(depth, grey, CV_BGR2GRAY);
-				//GaussianBlur(grey, grey, Size(5,5), 3, 3);
+				//GaussianBlur(depth, greyd, Size(1,1), 3, 3);
+				GaussianBlur(greyv, greyv, Size(3,3), 3, 3);
 
+				//greyv.convertTo(greyv,-1,1.5,0);
 				//GaussianBlur(depth, depth, Size(5,5), 3,3);
 				//imshow("Video", video);
 				//imshow("Depth", depth);
 
-				//show single image and convert to greyscale
-				//Mat im = imread("demov2.png");
-				//Mat grey = imread("image0001.png");
-				//cvtColor(depth, grey, CV_BGR2GRAY);
+				//work on video feed, find positive circles
+				//work on depth feed, find positive circles
+				//if positive circle is on video and depth feed, show circle
 
 				//using HoughCircles
 				//GaussianBlur(grey, grey, Size(5,5), 2, 2);
-				vector<Vec3f> circles;
-				HoughCircles(grey, circles, HOUGH_GRADIENT, 1, grey.rows/8, 100, 50, 0, 0);
-				for(int i=0; i<circles.size();i++){
-					Point2d center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-					int radius=cvRound(circles[i][2]);
+				/*vector<Vec3f> dcircles;
+				HoughCircles(greyd, dcircles, HOUGH_GRADIENT, 1, greyd.rows/8, 20, 15, 60, 100);
+				for(int i=0; i<dcircles.size();i++){
+					Point2d center(cvRound(dcircles[i][0]), cvRound(dcircles[i][1]));
+					int radius=cvRound(dcircles[i][2]);
 					//transpose points of circle from video feed to depth feed
-					circle(grey, center, 3, Scalar(0,255,0),-1,8,0);
-					circle(grey, center, radius, Scalar(0,0,255),3,8,0);
+					//circle(greyd, center, 3, Scalar(0,255,0),-1,8,0);
+					//circle(greyd, center, radius, Scalar(0,0,255),3,8,0);
+
+					//Point3d p=kinect.depth2xyz(center);
+					//cout<<p;
+					depthCirc=true;
+				}*/
+				vector<Vec3f> vcircles;
+				HoughCircles(greyv, vcircles, HOUGH_GRADIENT, 1, greyv.rows/8, 35, 80, 0, 0); //for video feed
+				for(int i=0; i<vcircles.size();i++){
+					Point2d center(cvRound(vcircles[i][0]), cvRound(vcircles[i][1]));
+					int radius=cvRound(vcircles[i][2]);
+					//transpose points of circle from video feed to depth feed
+					circle(greyv, center, 3, Scalar(0,255,0),-1,8,0);
+					circle(greyv, center, radius, Scalar(0,0,255),3,8,0);
 					//use depth2xyz on points to get x,y, and depth (z)
 					//Point3d p=kinect.depth2xyz(center);
 					//cout<<p;
-				}
-				/*HoughCircles(grey, circles, HOUGH_GRADIENT, 1, grey.rows/8, 65, 69, 0, 0); //for video feed
-				for(int i=0; i<circles.size();i++){
-					Point2d center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-					int radius=cvRound(circles[i][2]);
-					//transpose points of circle from video feed to depth feed
-					circle(grey, center, 3, Scalar(0,255,0),-1,8,0);
-					circle(grey, center, radius, Scalar(0,0,255),3,8,0);
-					//use depth2xyz on points to get x,y, and depth (z)
-					Point3d p=kinect.depth2xyz(center);
-					cout<<p;
 					//use RANSAC to find three/four points and determine center of square using triangles and distance
 					//find radius, depth and center of sphere
-				}*/
-				imshow("keypoints", grey);
+				}
+				//if(depthCirc==true && vidCirc==true){
+				//circle(img, center, 3, Scalar(0,255,0),-1,8,0);
+				//circle(img, center, radius, Scalar(0,0,255),3,8,0);
+				//}
+				imshow("keypoints", greyv);
 
 				int keyPressed = waitKey(1);
 
@@ -103,7 +112,7 @@ int main (int argc, char *argv[]) {
 				}
 				else if(keyPressed=='y'){
 					sprintf_s(fname, 100, "imagev%04d.png", modelNum+1);
-					imwrite(fname, grey);
+					imwrite(fname, greyv);
 				}
 				else if (keyPressed == ' ') {
 					
