@@ -15,8 +15,8 @@ int main (int argc, char *argv[]) {
 
 	char fname[100]; 
 
-	namedWindow("Video");
-	namedWindow("Depth");
+	//namedWindow("Video");
+	//namedWindow("Depth");
 
 	Mat video(Size(200,200), CV_8UC3);
 	video.setTo(Scalar(128,128,128));
@@ -53,21 +53,35 @@ int main (int argc, char *argv[]) {
 
 				/*grey video feed*/
 				Mat grey; 
-				cvtColor(video, grey, CV_BGR2GRAY);
-				GaussianBlur(grey, grey, Size(5,5), 3, 3);
+				depth.convertTo(grey,-1,1.5,1);
+				//cvtColor(video, grey, CV_BGR2GRAY);
+				//cvtColor(depth, grey, CV_BGR2GRAY);
+				//GaussianBlur(grey, grey, Size(5,5), 3, 3);
 
-				imshow("Video", video);
+				//GaussianBlur(depth, depth, Size(5,5), 3,3);
+				//imshow("Video", video);
 				//imshow("Depth", depth);
 
 				//show single image and convert to greyscale
 				//Mat im = imread("demov2.png");
-				//Mat test = imread("demod2.png");
-				//cvtColor(im, grey, CV_BGR2GRAY);
+				//Mat grey = imread("image0001.png");
+				//cvtColor(depth, grey, CV_BGR2GRAY);
 
 				//using HoughCircles
-				GaussianBlur(grey, grey, Size(5,5), 2, 2);
+				//GaussianBlur(grey, grey, Size(5,5), 2, 2);
 				vector<Vec3f> circles;
-				HoughCircles(grey, circles, HOUGH_GRADIENT, 1, grey.rows/8, 65, 69, 0, 0);//grey.rows = 480 aka img height; 55 30 20 50 radius
+				HoughCircles(grey, circles, HOUGH_GRADIENT, 1, grey.rows/8, 100, 50, 0, 0);
+				for(int i=0; i<circles.size();i++){
+					Point2d center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+					int radius=cvRound(circles[i][2]);
+					//transpose points of circle from video feed to depth feed
+					circle(grey, center, 3, Scalar(0,255,0),-1,8,0);
+					circle(grey, center, radius, Scalar(0,0,255),3,8,0);
+					//use depth2xyz on points to get x,y, and depth (z)
+					//Point3d p=kinect.depth2xyz(center);
+					//cout<<p;
+				}
+				/*HoughCircles(grey, circles, HOUGH_GRADIENT, 1, grey.rows/8, 65, 69, 0, 0); //for video feed
 				for(int i=0; i<circles.size();i++){
 					Point2d center(cvRound(circles[i][0]), cvRound(circles[i][1]));
 					int radius=cvRound(circles[i][2]);
@@ -79,7 +93,7 @@ int main (int argc, char *argv[]) {
 					cout<<p;
 					//use RANSAC to find three/four points and determine center of square using triangles and distance
 					//find radius, depth and center of sphere
-				}
+				}*/
 				imshow("keypoints", grey);
 
 				int keyPressed = waitKey(1);
@@ -89,7 +103,7 @@ int main (int argc, char *argv[]) {
 				}
 				else if(keyPressed=='y'){
 					sprintf_s(fname, 100, "imagev%04d.png", modelNum+1);
-					imwrite(fname, video);
+					imwrite(fname, grey);
 				}
 				else if (keyPressed == ' ') {
 					
