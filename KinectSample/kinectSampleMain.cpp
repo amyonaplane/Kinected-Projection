@@ -13,7 +13,7 @@ int main (int argc, char *argv[]) {
 	sprintf_s(pattern, 100, "%s%%03d.ply", argv[1]);
 	int modelNum = atoi(argv[2]);
 
-	char fname[100]; 
+	char fname[100];
 
 	//namedWindow("Video");
 	//namedWindow("Depth");
@@ -76,7 +76,7 @@ int main (int argc, char *argv[]) {
 				}
 				HoughCircles(greyd, dcircles, HOUGH_GRADIENT, 1, greyd.rows/8, 20, 15, 30, 45); 
 				if(dcircles.size()>0){
-					depthCirc=true;
+					depthCirc=true; 
 				}
 
 					//Point3d p=kinect.depth2xyz(center);
