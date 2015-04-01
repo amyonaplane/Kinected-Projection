@@ -74,7 +74,7 @@ int main (int argc, char *argv[]) {
 					//if in threshold it is white, continue
 					vidCirc=true;
 				}
-				HoughCircles(greyd, dcircles, HOUGH_GRADIENT, 1, greyd.rows/8, 20, 15, 30, 45);
+				HoughCircles(greyd, dcircles, HOUGH_GRADIENT, 1, greyd.rows/8, 20, 15, 30, 45); 
 				if(dcircles.size()>0){
 					depthCirc=true;
 				}
@@ -91,7 +91,7 @@ int main (int argc, char *argv[]) {
 								int radiusd=cvRound((vcircles[0][2]+dcircles[0][2])/2);
 								circle(greyd, centerd, 3, Scalar(0,255,0),-1,8,0);
 								circle(greyd, centerd, radiusd, Scalar(0,0,255),3,8,0);
-						}
+						} 
 				}
 				imshow("keypoints", greyd);
 
