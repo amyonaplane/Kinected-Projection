@@ -85,7 +85,7 @@ int main (int argc, char *argv[]) {
 					//find radius, depth and center of sphere
 				if(depthCirc==true && vidCirc==true){
 							//if distance/difference between centers is less than certain threshold
-							long distance = sqrt(pow((vcircles[0][0]-dcircles[0][0]),2)+pow((vcircles[0][1]-dcircles[0][1]),2));
+							float distance = sqrt(pow((vcircles[0][0]-dcircles[0][0]),2)+pow((vcircles[0][1]-dcircles[0][1]),2));
 							if(distance<=15){
 								Point2d centerd(cvRound((vcircles[0][0]+dcircles[0][0])/2), cvRound((vcircles[0][1])+dcircles[0][1])/2);
 								int radiusd=cvRound((vcircles[0][2]+dcircles[0][2])/2);
