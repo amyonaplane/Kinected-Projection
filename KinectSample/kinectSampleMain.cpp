@@ -14,9 +14,32 @@ int main (int argc, char *argv[]) {
 	int modelNum = atoi(argv[2]);
 
 	char fname[100];
-
 	//namedWindow("Video");
 	//namedWindow("Depth");
+	Size projectorSize(1024,768); //resolution of projector
+	Size mainScreenSize(1920,1080); //resolution of main display
+	namedWindow("Projector");
+	Mat proj=imread("checkerboard.png");
+	//Mat proj(projectorSize, CV_8UC3);
+	//proj.setTo(Scalar(128,128,128));
+	//rectangle(proj, Point(50, 100), Point(200,300), Scalar(255,0,255),5,8);
+	imshow("Projector", proj);
+	waitKey(10);
+	
+	// Get a Windows handle to the window we made
+	HWND windowHandle = FindWindow(0, "Projector");
+	if (!windowHandle) {
+		cout << "Couldn't find window" << std::endl;
+	} else {
+   // Make the window full screen with no border or title,e tc.
+   SetWindowLongPtr(windowHandle, GWL_STYLE, WS_SYSMENU | 	
+     WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE);
+
+   // Shift the window so it is just to the right of the main screen
+   MoveWindow(windowHandle, mainScreenSize.width, 0,
+     projectorSize.width, projectorSize.height, TRUE);
+	}
+	waitKey(10);
 
 	Mat video(Size(200,200), CV_8UC3);
 	video.setTo(Scalar(128,128,128));
