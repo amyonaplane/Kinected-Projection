@@ -14,7 +14,7 @@ int main (int argc, char *argv[]) {
 	int modelNum = atoi(argv[2]);
 
 	char fname[100];
-	//namedWindow("Video");
+	namedWindow("Video");
 	//namedWindow("Depth");
 	Size projectorSize(1024,768); //resolution of projector
 	Size mainScreenSize(1920,1080); //resolution of main display
@@ -25,7 +25,7 @@ int main (int argc, char *argv[]) {
 	//rectangle(proj, Point(50, 100), Point(200,300), Scalar(255,0,255),5,8);
 	imshow("Projector", proj);
 	waitKey(10);
-	
+
 	// Get a Windows handle to the window we made
 	HWND windowHandle = FindWindow(0, "Projector");
 	if (!windowHandle) {
@@ -119,7 +119,19 @@ int main (int argc, char *argv[]) {
 								circle(greyd, centerd, radiusd, Scalar(0,0,255),3,8,0);
 						//} 
 				}
-				imshow("keypoints", greyd);
+				//imshow("keypoints", greyd);
+
+				//detect four points
+				//compute homography from four points to projector points
+				//detect corners of chessboard
+				//transform detected corners to projector poitns using homography
+				//for all corner points
+					//project projector plan points in neighbourhood of transformed corner point
+					//captre image and detect point's coordinates
+					///select the one closest to detected corner
+				//end for
+
+				imshow("video", video);
 
 				int keyPressed = waitKey(1);
 
