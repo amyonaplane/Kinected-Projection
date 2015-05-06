@@ -1,5 +1,9 @@
 #include "Kinect.h"
 #include <opencv2/opencv.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <stdio.h>
 
 #include <iostream>
 #include <fstream>
@@ -8,21 +12,33 @@ using namespace cv;
 using namespace std;
 
 int main (int argc, char *argv[]) {
-
+	Size board_sz=Size(8,6); //size of chessboard
+	vector<Point2f> corners; //store points of corners found
 	char pattern[100];
 	sprintf_s(pattern, 100, "%s%%03d.ply", argv[1]);
 	int modelNum = atoi(argv[2]);
 
 	char fname[100];
-	namedWindow("Video");
+	//namedWindow("Video");
 	//namedWindow("Depth");
 	Size projectorSize(1024,768); //resolution of projector
 	Size mainScreenSize(1920,1080); //resolution of main display
 	namedWindow("Projector");
 	Mat proj=imread("checkerboard.png");
+
+	//find corners of chessboard using image
+	Mat grey;
+	cvtColor(proj, grey, CV_RGB2GRAY);
+	bool found = findChessboardCorners(grey,board_sz,corners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE+CALIB_CB_FAST_CHECK);
+	if(found){
+		cornerSubPix(grey, corners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+		drawChessboardCorners(proj, board_sz, Mat(corners), found);
+	}
+
 	//Mat proj(projectorSize, CV_8UC3);
 	//proj.setTo(Scalar(128,128,128));
 	//rectangle(proj, Point(50, 100), Point(200,300), Scalar(255,0,255),5,8);
+
 	imshow("Projector", proj);
 	waitKey(10);
 
@@ -73,10 +89,20 @@ int main (int argc, char *argv[]) {
 			}
 
 			if (haveVideo && haveDepth) {
+
 				bool vidCirc=false;
 				bool depthCirc=false;
+				Mat greyv, greyd;
+				Size vboard_sz=Size(8,6); //size of chessboard
+				vector<Point2f> vcorners; //store points of corners found
+				Mat vgrey;
+				cvtColor(video, vgrey, CV_RGB2GRAY);
+				bool found = findChessboardCorners(vgrey,vboard_sz,vcorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE+CALIB_CB_FAST_CHECK);
+				if(found){
+					cornerSubPix(vgrey, vcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+					drawChessboardCorners(video, vboard_sz, Mat(vcorners), found);
+				}
 
-				Mat greyv, greyd; 
 
 				cvtColor(video, greyv, CV_BGR2GRAY);
 				GaussianBlur(greyv, greyv, Size(5,5), 3, 3);
@@ -145,7 +171,7 @@ int main (int argc, char *argv[]) {
 				else if (keyPressed == ' ') {
 					
 					sprintf_s(fname, 100, "image%04d.png", modelNum+1);
-					imwrite(fname, depth);
+					imwrite(fname, video);
 
 					sprintf_s(fname, 100, pattern, modelNum++);
 					cout << fname << endl;
