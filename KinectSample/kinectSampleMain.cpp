@@ -90,16 +90,13 @@ int main (int argc, char *argv[]) {
 				Size vboard_sz=Size(8,6); //size of chessboard
 				vector<Point2f> vcorners; //store points of corners found
 				Mat vgrey;
-				if(pressed){
+			//	if(pressed){
 					Mat pic=imread("calibrate.png");
 					cvtColor(pic, vgrey, CV_RGB2GRAY);
-					proj=NULL;
-					imshow("Projector", proj);
 					bool vfound = findChessboardCorners(vgrey,vboard_sz,vcorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(vfound){
-
 						cornerSubPix(vgrey, vcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-						drawChessboardCorners(video, vboard_sz, Mat(vcorners), vfound);
+						//drawChessboardCorners(video, vboard_sz, Mat(vcorners), vfound);
 						Mat H=findHomography(vcorners, corners, RANSAC);
 
 						//find corners of the physical checkerboard
@@ -109,12 +106,10 @@ int main (int argc, char *argv[]) {
 						cvtColor(video, greyvid, CV_RGB2GRAY);
 						bool pfound = findChessboardCorners(greyvid, pboard_sz, pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 						if(pfound){
-
-						cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-					drawChessboardCorners(video, pboard_sz, Mat(pcorners),pfound);
-					}
-				}
-				
+							cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+							drawChessboardCorners(video, pboard_sz, Mat(pcorners),pfound);
+						}
+					//}
 				imshow("video",video);
 
 				cvtColor(video, greyv, CV_BGR2GRAY);
@@ -169,6 +164,8 @@ int main (int argc, char *argv[]) {
 					sprintf_s(fname, 100, "calibrate.png", modelNum+1);
 					imwrite(fname, video);
 					pressed=true;
+					proj=NULL;
+					imshow("Projector", proj);
 				}
 				else if (keyPressed == ' ') {
 					
