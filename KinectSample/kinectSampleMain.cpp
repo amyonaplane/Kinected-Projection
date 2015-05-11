@@ -26,19 +26,16 @@ int main (int argc, char *argv[]) {
 	namedWindow("Projector");
 	Mat proj=imread("checkerboard.png");
 
-	//find corners of chessboard using image
+	//find corners of chessboard using image on projector
 	Mat grey;
 	cvtColor(proj, grey, CV_RGB2GRAY);
 	bool found = findChessboardCorners(grey,board_sz,corners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE+CALIB_CB_FAST_CHECK);
 	if(found){
 		cornerSubPix(grey, corners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-		drawChessboardCorners(proj, board_sz, Mat(corners), found);
 	}
 
-	//Mat proj(projectorSize, CV_8UC3);
-	//proj.setTo(Scalar(128,128,128));
-	//rectangle(proj, Point(50, 100), Point(200,300), Scalar(255,0,255),5,8);
-
+	//for each point found in corners in
+	//circle(Mat(corners), Point(100,100),2, Scalar(0,0,255));
 	imshow("Projector", proj);
 	waitKey(10);
 
@@ -64,17 +61,14 @@ int main (int argc, char *argv[]) {
 	depth.setTo(Scalar(128,128,128));
 
 	try {
-
+		Mat H;
 		Kinect& kinect = Kinect::get(0);
 		kinect.openVideoStream(Kinect::RESOLUTION_640x480);
 		kinect.openDepthStream(Kinect::RESOLUTION_640x480);
-
 		kinect.setDepthMode(Kinect::DEPTH_MODE_NEAR);
 		double angle = 5;
 		kinect.setAngle(5);
-		
 		bool done = false;
-
 		while (!done) {
 
 			bool haveVideo = kinect.grabVideoFrame();
@@ -89,20 +83,39 @@ int main (int argc, char *argv[]) {
 			}
 
 			if (haveVideo && haveDepth) {
-
 				bool vidCirc=false;
 				bool depthCirc=false;
+				bool pressed=false;
 				Mat greyv, greyd;
 				Size vboard_sz=Size(8,6); //size of chessboard
 				vector<Point2f> vcorners; //store points of corners found
 				Mat vgrey;
-				cvtColor(video, vgrey, CV_RGB2GRAY);
-				bool found = findChessboardCorners(vgrey,vboard_sz,vcorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE+CALIB_CB_FAST_CHECK);
-				if(found){
-					cornerSubPix(vgrey, vcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-					drawChessboardCorners(video, vboard_sz, Mat(vcorners), found);
-				}
+				if(pressed){
+					Mat pic=imread("calibrate.png");
+					cvtColor(pic, vgrey, CV_RGB2GRAY);
+					proj=NULL;
+					imshow("Projector", proj);
+					bool vfound = findChessboardCorners(vgrey,vboard_sz,vcorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+					if(vfound){
 
+						cornerSubPix(vgrey, vcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+						drawChessboardCorners(video, vboard_sz, Mat(vcorners), vfound);
+						Mat H=findHomography(vcorners, corners, RANSAC);
+
+						//find corners of the physical checkerboard
+						Size pboard_sz=Size(12,7); //size of chessboard
+						vector<Point2f> pcorners;
+						Mat greyvid;
+						cvtColor(video, greyvid, CV_RGB2GRAY);
+						bool pfound = findChessboardCorners(greyvid, pboard_sz, pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+						if(pfound){
+
+						cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+					drawChessboardCorners(video, pboard_sz, Mat(pcorners),pfound);
+					}
+				}
+				
+				imshow("video",video);
 
 				cvtColor(video, greyv, CV_BGR2GRAY);
 				GaussianBlur(greyv, greyv, Size(5,5), 3, 3);
@@ -143,31 +156,20 @@ int main (int argc, char *argv[]) {
 				int radiusd=cvRound(dcircles[0][2]);
 								circle(greyd, centerd, 3, Scalar(0,255,0),-1,8,0);
 								circle(greyd, centerd, radiusd, Scalar(0,0,255),3,8,0);
-						//} 
+						} 
 				}
 				//imshow("keypoints", greyd);
-
-				//detect four points
-				//compute homography from four points to projector points
-				//detect corners of chessboard
-				//transform detected corners to projector poitns using homography
-				//for all corner points
-					//project projector plan points in neighbourhood of transformed corner point
-					//captre image and detect point's coordinates
-					///select the one closest to detected corner
-				//end for
-
-				imshow("video", video);
 
 				int keyPressed = waitKey(1);
 
 				if (keyPressed == 'q' || keyPressed == 'Q') {
 					done = true;
 				}
-				/*else if(keyPressed=='y'){
-					sprintf_s(fname, 100, "imagev%04d.png", modelNum+1);
-					imwrite(fname, depth);
-				}*/
+				else if(keyPressed=='y'){
+					sprintf_s(fname, 100, "calibrate.png", modelNum+1);
+					imwrite(fname, video);
+					pressed=true;
+				}
 				else if (keyPressed == ' ') {
 					
 					sprintf_s(fname, 100, "image%04d.png", modelNum+1);
@@ -227,7 +229,6 @@ int main (int argc, char *argv[]) {
 				}
 			}
 		}
-
 	} catch (kinect_exception) {
 		cerr << "Caught an exception" << endl;
 	}
