@@ -4,12 +4,15 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <stdio.h>
+#include "Eigen/Eigen/Eigen"
+#include "Eigen/Eigen/StdVector"
 
 #include <iostream>
 #include <fstream>
 
 using namespace cv;
 using namespace std;
+using namespace Eigen;
 
 int main (int argc, char *argv[]) {
 	Size board_sz=Size(8,6); //size of chessboard
@@ -83,78 +86,43 @@ int main (int argc, char *argv[]) {
 			}
 
 			if (haveVideo && haveDepth) {
-				bool vidCirc=false;
-				bool depthCirc=false;
 				bool pressed=false;
-				Mat greyv, greyd;
 				Size vboard_sz=Size(8,6); //size of chessboard
 				vector<Point2f> vcorners; //store points of corners found
 				Mat vgrey;
-			//	if(pressed){
-					Mat pic=imread("calibrate.png");
-					cvtColor(pic, vgrey, CV_RGB2GRAY);
-					bool vfound = findChessboardCorners(vgrey,vboard_sz,vcorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
-					if(vfound){
-						cornerSubPix(vgrey, vcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-						//drawChessboardCorners(video, vboard_sz, Mat(vcorners), vfound);
-						Mat H=findHomography(vcorners, corners, RANSAC);
-
-						//find corners of the physical checkerboard
-						Size pboard_sz=Size(12,7); //size of chessboard
-						vector<Point2f> pcorners;
-						Mat greyvid;
-						cvtColor(video, greyvid, CV_RGB2GRAY);
-						bool pfound = findChessboardCorners(greyvid, pboard_sz, pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
-						if(pfound){
-							cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-							drawChessboardCorners(video, pboard_sz, Mat(pcorners),pfound);
+				Mat pic=imread("calibrate.png");
+				cvtColor(pic, vgrey, CV_RGB2GRAY);
+				bool vfound = findChessboardCorners(vgrey,vboard_sz,vcorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+				if(vfound){
+					cornerSubPix(vgrey, vcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+			Mat H=findHomography(vcorners, corners, 0);//0,RANSAC,LMEDS
+					Matrix3f H1;
+					for(int i=0;i<H.rows;i++){
+						for(int j=0;j<H.cols;j++){
+							H1(i,j)=H.at<double>(i,j);
 						}
-					//}
+					}
+					//find corners of the physical checkerboard
+				Size pboard_sz=Size(12,7); //size of chessboard
+					vector<Point2f> pcorners;
+					Mat greyvid;
+					cvtColor(video, greyvid, CV_RGB2GRAY);
+					bool pfound = findChessboardCorners(greyvid, pboard_sz, pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+					if(pfound){
+						proj=NULL;
+						cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+						//drawChessboardCorners(video, pboard_sz, Mat(pcorners),pfound);
+						for(Point2f p:pcorners){//for each corner found
+							Vector3f v(p.x,p.y,1);//convert point into vector
+							Vector3f v2(H1*v);//multiply vector by homograpy
+							v2/=v2(2);//divide by p(2)
+							circle(proj,Point2f(v2(0),v2(1)),5,Scalar(0,255,0),5);//print circle on found points
+						}
+						imshow("Projector",proj);
+					}//end pfound
+				}//end vfound
 				imshow("video",video);
-
-				cvtColor(video, greyv, CV_BGR2GRAY);
-				GaussianBlur(greyv, greyv, Size(5,5), 3, 3);
-				//greyd=depth;
-				GaussianBlur(depth,greyd, Size(3,3),3,3);
-				//depth.convertTo(greyd, -1, 1.0,0);
-				//imshow("Video", video);
-				//imshow("Depth", depth);
-				vector<Vec3f> dcircles;
-				//vector<Vec3f> vcircles;
-
-				/*HoughCircles(greyv, vcircles, HOUGH_GRADIENT, 1, greyv.rows/4, 25, 30, 30, 45);
-				//HoughCircles(greyv, vcircles, HOUGH_GRADIENT, 1, greyd.rows, 60, 60, 0, 0);
-				if (vcircles.size()>0){
-					//create matrix that contains center and a radius of 'radius
-					//euclidean distance
-					//find threshold
-					//if in threshold it is white, continue
-					vidCirc=true;
-				}*/
-				HoughCircles(greyd, dcircles, HOUGH_GRADIENT, 1, greyd.rows/8, 20, 15, 30, 45); 
-				//if(dcircles.size()>0){
-				//	depthCirc=true; 
-				//}
-
-					//Point3d p=kinect.depth2xyz(center);
-					//cout<<p;
-					//use RANSAC to find three/four points and determine center of square using triangles and distance
-					//find radius, depth and center of sphere
-				//if(depthCirc==true && vidCirc==true){
-							//if distance/difference between centers is less than certain threshold
-							//float distance = sqrt(pow((vcircles[0][0]-dcircles[0][0]),2)+pow((vcircles[0][1]-dcircles[0][1]),2));
-							//if(distance<=15){
-								//Point2d centerd(cvRound((vcircles[0][0]+dcircles[0][0])/2), cvRound((vcircles[0][1])+dcircles[0][1])/2);
-				for(int i=0;i<dcircles.size();i++){
-				Point2d centerd(cvRound(dcircles[0][0]), cvRound(dcircles[0][1]));
-								//int radiusd=cvRound((vcircles[0][2]+dcircles[0][2])/2);
-				int radiusd=cvRound(dcircles[0][2]);
-								circle(greyd, centerd, 3, Scalar(0,255,0),-1,8,0);
-								circle(greyd, centerd, radiusd, Scalar(0,0,255),3,8,0);
-						} 
-				}
-				//imshow("keypoints", greyd);
-
+				
 				int keyPressed = waitKey(1);
 
 				if (keyPressed == 'q' || keyPressed == 'Q') {
@@ -163,7 +131,7 @@ int main (int argc, char *argv[]) {
 				else if(keyPressed=='y'){
 					sprintf_s(fname, 100, "calibrate.png", modelNum+1);
 					imwrite(fname, video);
-					pressed=true;
+					//pressed=true;
 					proj=NULL;
 					imshow("Projector", proj);
 				}
@@ -223,12 +191,14 @@ int main (int argc, char *argv[]) {
 					kinect.setAngle(angle-2);
 					angle = kinect.getAngle();
 					cout << "Angle decreased to " << angle << endl;
-				}
-			}
-		}
-	} catch (kinect_exception) {
+				}//end else if
+			}//end if video and depth
+		}//end while
+	}//end try
+	//}//end pfound
+	catch (kinect_exception) {
 		cerr << "Caught an exception" << endl;
-	}
+	}//end catch
 
 	return 0;
-}
+}//end main
