@@ -20,67 +20,6 @@ using namespace cv;
 using namespace std;
 using namespace Eigen;
 
-Matrix3f homography(vector<Point2f> corner, vector<Point2f> vcorner){
-	Matrix3d H;
-	MatrixXd M(8,9);
-
-	for(int i=0;i<8;i++){
-		MatrixXd Ai(2,9);
-		for(Point2f c:corner){
-			Ai(0,0)=0;
-			Ai(0,1)=0;
-			Ai(0,2)=0;
-			Ai(0,3)=-c.x;
-			Ai(0,4)=-c.y;
-			Ai(0,5)=-1;
-			Ai(0,6)=c.x;
-			Ai(0,7)=c.y;
-			Ai(1,0)=c.x;
-			Ai(1,1)=c.y;
-			Ai(1,2)=1;
-			Ai(1,3)=0;
-			Ai(1,4)=0;
-			Ai(1,5)=0;
-			Ai(1,6)=c.x;
-			Ai(1,7)=c.y;
-		}
-		for(Point2f v:vcorner){
-			Ai(0,6)*=v.y;
-			Ai(0,7)*=v.y;
-			Ai(0,8)=v.y;
-			Ai(1,6)*=-v.x;
-			Ai(1,7)*=-v.x;
-			Ai(1,8)*=-v.x;
-		}
-	//add rows from Ai to M
-		M.row(i)=Ai.row(0);
-		M.row(i+1)=Ai.row(1);
-		i++;
-	}
-
-	//obtain SVD of Ai
-	JacobiSVD<MatrixXd> svd(M, ComputeFullV);
-
-	MatrixXd v=svd.matrixV();
-	VectorXd temp(9,1);
-	for(int m=0;m<9;m++){
-		temp(m,0)=v(m,8);
-	}
-
-	Matrix3f soln;
-	soln(0,0)=temp(0,0);
-	soln(0,1)=temp(1,0);
-	soln(0,2)=temp(2,0);
-	soln(1,0)=temp(3,0);
-	soln(1,1)=temp(4,0);
-	soln(1,2)=temp(5,0);
-	soln(2,0)=temp(6,0);
-	soln(2,1)=temp(7,0);
-	soln(2,2)=temp(8,0);
-
-	return soln;
-}
-
 int main (int argc, char *argv[]) {
 	Size board_sz=Size(8,6); //size of chessboard
 	vector<Point2f> corners; //store points of corners found
@@ -168,10 +107,8 @@ int main (int argc, char *argv[]) {
 							H1(i,j)=H.at<double>(i,j);
 						}
 					}
-					//Matrix3f H=homography(corners,vcorners);
-					//cout<<H;
 					//find corners of the physical checkerboard
-					Size pboard_sz=Size(12,7);
+					Size pboard_sz=Size(8,6);//(12,7);
 					vector<Point2f> pcorners;
 					Mat greyvid;
 					cvtColor(video, greyvid, CV_RGB2GRAY);
