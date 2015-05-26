@@ -26,6 +26,7 @@ int main (int argc, char *argv[]) {
 	char pattern[100];
 	sprintf_s(pattern, 100, "%s%%03d.ply", argv[1]);
 	int modelNum = atoi(argv[2]);
+	bool pfound=false;
 
 	char fname[100];
 	//namedWindow("Video");
@@ -35,14 +36,14 @@ int main (int argc, char *argv[]) {
 	namedWindow("Projector");
 	Mat proj=imread("checkerboard.png");
 
-	//find corners of chessboard using image on projector
+	//find corners of chessboard using image found on projector
 	Mat grey;
 	cvtColor(proj, grey, CV_RGB2GRAY);
 	bool found = findChessboardCorners(grey,board_sz,corners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE+CALIB_CB_FAST_CHECK);
 	if(found){
 		cornerSubPix(grey, corners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 	}
-
+	bool search = false;
 	//for each point found in corners in
 	imshow("Projector", proj);
 	waitKey(10);
@@ -81,7 +82,7 @@ int main (int argc, char *argv[]) {
 
 			bool haveVideo = kinect.grabVideoFrame();
 			bool haveDepth = kinect.grabDepthFrame();
-
+			
 			if (haveVideo) {
 				kinect.fetchVideoImage(&video);
 			}
@@ -91,54 +92,75 @@ int main (int argc, char *argv[]) {
 			}
 
 			if (haveVideo && haveDepth) {
-				bool pressed=false;
-				Size vboard_sz=Size(8,6);
-				vector<Point2f> vcorners;
-				Mat vgrey;
-				Mat pic=imread("calibrate.png");
-				cvtColor(pic, vgrey, CV_RGB2GRAY);
-				bool vfound = findChessboardCorners(vgrey,vboard_sz,vcorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
-				if(vfound){
-					cornerSubPix(vgrey, vcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-					Mat H=findHomography(vcorners, corners, RANSAC);//0,RANSAC,LMEDS
-					Matrix3f H1;
-					for(int i=0;i<H.rows;i++){
-						for(int j=0;j<H.cols;j++){
-							H1(i,j)=H.at<double>(i,j);
-						}
-					}
-					//find corners of the physical checkerboard
-					Size pboard_sz=Size(8,6);//(12,7);
-					vector<Point2f> pcorners;
-					Mat greyvid;
-					cvtColor(video, greyvid, CV_RGB2GRAY);
-					bool pfound = findChessboardCorners(greyvid, pboard_sz, pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
-					if(pfound){
-						proj=NULL;
-						cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-						//drawChessboardCorners(video, pboard_sz, Mat(pcorners),pfound)
-						for(Point2f p:pcorners){//for each corner found
-							Vector3f v(p.x,p.y,1);//convert point into vector
-							Vector3f v2(H1*v);//multiply vector by homograpy
-							v2/=v2(2);//divide by p(2)
-							circle(proj,Point2f(v2(0),v2(1)),3,Scalar(0,255,0),3);//print circle on found points
-						}
-						imshow("Projector",proj);
-					}//end pfound
-				}//end vfound
-				imshow("video",video);
-				
 				int keyPressed = waitKey(1);
+				Mat greyvid;
+				Matrix3f H1;
+				cvtColor(video, greyvid, CV_RGB2GRAY);
+				imshow("g",greyvid);
+				imshow("video",video);
+				if(search){
+					proj=NULL;
+					imshow("Projector",proj);
+					vector<Point2f> pcorners;
+					pfound = findChessboardCorners(greyvid, board_sz, pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+					if(pfound){
+							cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+							drawChessboardCorners(greyvid, board_sz, Mat(pcorners), pfound);
+							imshow("i",greyvid);
+							for(Point2f p:pcorners){//for each corner found
+								Vector3f v(p.x,p.y,1);//convert point into vector
+								Vector3f v2(H1*v);//multiply vector by homograpy
+								//v2/=v2(2);//divide by p(2) - generalize
+								circle(proj,Point2f(v2(0),v2(1)),3,Scalar(0,255,0),3);//print circle on found points
+							}
+							imshow("Projector",proj);
+					}
+				}
 
 				if (keyPressed == 'q' || keyPressed == 'Q') {
 					done = true;
 				}
 				else if(keyPressed=='y'){
-					sprintf_s(fname, 100, "calibrate.png", modelNum+1);
-					imwrite(fname, video);
-					//pressed=true;
+					Size vboard_sz=Size(8,6);
+					vector<Point2f> vcorners;
+					Mat pic, pgrey;//, greyvid;
+					kinect.fetchVideoImage(&pic);//get current video image to find chessboard corners
 					proj=NULL;
-					imshow("Projector", proj);
+					imshow("Projector",proj);
+					cvtColor(pic, pgrey, CV_RGB2GRAY);
+					imshow("v",pgrey);
+					//find corners from checkerboard in video image
+					bool vfound = findChessboardCorners(pgrey,vboard_sz,vcorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+					if(vfound){
+						cornerSubPix(pgrey, vcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+						Mat H=findHomography(vcorners, corners, RANSAC);//0,RANSAC,LMEDS, homography between video and image corners
+						for(int i=0;i<H.rows;i++){
+							for(int j=0;j<H.cols;j++){
+								H1(i,j)=H.at<double>(i,j);
+							}
+						}
+						//find corners from the physical checkerboard
+						Size pboard_sz=Size(8,6);//(12,7);
+						vector<Point2f> pcorners;
+					//	waitKey(10000);
+						search=true;
+						waitKey(4000);
+						//pfound = findChessboardCorners(greyvid, pboard_sz, pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+						//if(pfound){
+		//					cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+		//					drawChessboardCorners(video, pboard_sz, Mat(pcorners), pfound);
+		//					imshow("g",greyvid);
+							/*for(Point2f p:pcorners){//for each corner found
+								Vector3f v(p.x,p.y,1);//convert point into vector
+								Vector3f v2(H1*v);//multiply vector by homograpy
+								v2/=v2(2);//divide by p(2) - generalize
+								circle(proj,Point2f(v2(0),v2(1)),3,Scalar(0,255,0),3);//print circle on found points
+							}
+							imshow("Projector",proj);*/
+			//			}//end pfound
+					}//end vfound
+					//proj=NULL;
+					//imshow("Projector", proj);
 				}
 				else if (keyPressed == ' ') {
 					
