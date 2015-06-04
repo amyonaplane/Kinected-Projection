@@ -100,25 +100,6 @@ int main (int argc, char *argv[]) {
 				imshow("g",greyvid);
 
 				imshow("video",video);
-		/*		if(search){
-					proj=NULL;
-					imshow("Projector",proj);
-					vector<Point2f> pcorners;
-					pfound = findChessboardCorners(greyvid, Size(12,7), pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
-					if(pfound){
-							cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-							drawChessboardCorners(greyvid, Size(12,7), Mat(pcorners), pfound);
-							imshow("i",greyvid);
-							for(Point2f p:pcorners){//for each corner found
-								Vector3f v(p.x,p.y,1);//convert point into vector
-								Vector3f v2(H1.inverse()*v);//multiply vector by homograpy
-								v2/=v2(2);//divide by p(2) - generalize
-								circle(proj,Point2f(v2(0),v2(1)),3,Scalar(0,255,0),3);//print circle on found points
-							}
-							imshow("Projector",proj);
-					}
-				}*/
-
 				if (keyPressed == 'q' || keyPressed == 'Q') {
 					done = true;
 				}
@@ -145,23 +126,9 @@ int main (int argc, char *argv[]) {
 						//find corners from the physical checkerboard
 						Size pboard_sz=Size(12,7);//(12,7);
 						vector<Point2f> pcorners;
-					//	waitKey(10000);
 						search=true;
 						waitKey(4000);
-				//		pfound = findChessboardCorners(greyvid, pboard_sz, pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
-					//	if(pfound){
-						//	cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-							//drawChessboardCorners(video, pboard_sz, Mat(pcorners), pfound);
-							//imshow("g",greyvid);
-							//for(Point2f p:pcorners){//for each corner found
-								//Vector3f v(p.x,p.y,1);//convert point into vector
-								//Vector3f v2(H1*v);//multiply vector by homograpy
-								//v2/=v2(2);//divide by p(2) - generalize
-								//circle(proj,Point2f(v2(0),v2(1)),3,Scalar(0,255,0),3);//print circle on found points
-						//	}
-							//imshow("Projector",proj);
-						//}//end pfound
-					}//end vfound*/
+					}//end vfound
 					proj=NULL;
 					imshow("Projector", proj);
 				}
@@ -171,16 +138,16 @@ int main (int argc, char *argv[]) {
 					vector<Point2f> pcorners;
 					pfound = findChessboardCorners(greyvid, Size(12,7), pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(pfound){
-							cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-							drawChessboardCorners(greyvid, Size(12,7), Mat(pcorners), pfound);
-							imshow("i",greyvid);
-							for(Point2f p:pcorners){//for each corner found
-								Vector3f v(p.x,p.y,1);//convert point into vector
-								Vector3f v2(H1.inverse()*v);//multiply vector by homograpy
-								v2/=v2(2);//divide by p(2) - generalize
-								circle(proj,Point2f(v2(0),v2(1)),3,Scalar(0,255,0),3);//print circle on found points
-							}
-							imshow("Projector",proj);
+						cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+						drawChessboardCorners(greyvid, Size(12,7), Mat(pcorners), pfound);
+						imshow("i",greyvid);
+						for(Point2f p:pcorners){//for each corner found
+							Vector3f v(p.x,p.y,1);//convert point into vector
+							Vector3f v2(H1.inverse()*v);//multiply vector by homograpy
+							v2/=v2(2);//divide by p(2) - generalize
+							circle(proj,Point2f(v2(0),v2(1)),3,Scalar(0,255,0),3);//print circle on found points
+						}
+						imshow("Projector",proj);
 					}
 				}
 				else if (keyPressed == ' ') {
@@ -243,7 +210,6 @@ int main (int argc, char *argv[]) {
 			}//end if video and depth
 		}//end while
 	}//end try
-	//}//end pfound
 	catch (kinect_exception) {
 		cerr << "Caught an exception" << endl;
 	}//end catch
