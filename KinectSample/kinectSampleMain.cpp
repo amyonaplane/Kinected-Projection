@@ -27,6 +27,7 @@ int main (int argc, char *argv[]) {
 	sprintf_s(pattern, 100, "%s%%03d.ply", argv[1]);
 	int modelNum = atoi(argv[2]);
 	bool pfound=false;
+	vector<Point2f> rcorners;
 
 	char fname[100];
 	//namedWindow("Video");
@@ -123,7 +124,7 @@ int main (int argc, char *argv[]) {
 								H1(i,j)=H.at<double>(i,j);
 							}
 						}
-						//find corners from the physical checkerboard
+						//find corners from the physical chessboard
 						Size pboard_sz=Size(12,7);//(12,7);
 						vector<Point2f> pcorners;
 						search=true;
@@ -132,6 +133,7 @@ int main (int argc, char *argv[]) {
 					proj=NULL;
 					imshow("Projector", proj);
 				}
+				//find corners on static real-world chessboard
 				else if(keyPressed=='j'&&search==true){
 					proj=NULL;
 					imshow("Projector",proj);
@@ -143,11 +145,17 @@ int main (int argc, char *argv[]) {
 						imshow("i",greyvid);
 						for(Point2f p:pcorners){//for each corner found
 							Vector3f v(p.x,p.y,1);//convert point into vector
-							Vector3f v2(H1.inverse()*v);//multiply vector by homograpy
+							Vector3f v2(H1.inverse()*v);//multiply vector by homograpy inverse
 							v2/=v2(2);//divide by p(2) - generalize
 							circle(proj,Point2f(v2(0),v2(1)),3,Scalar(0,255,0),3);//print circle on found points
+						//if a is pressed, move dot to right (p.x--)?
+						//if d is pressed, move dot to right (p.x++)?
+						//if w is pressed, move dot up (p.y++)?
+						//if x is pressed, move dot down (p.y--)?
+						//if f is pressed, move onto the next point
+													imshow("Projector",proj);
 						}
-						imshow("Projector",proj);
+
 					}
 				}
 				else if (keyPressed == ' ') {
