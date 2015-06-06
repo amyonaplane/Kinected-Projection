@@ -16,10 +16,6 @@ using namespace cv;
 using namespace std;
 using namespace Eigen;
 
-using namespace cv;
-using namespace std;
-using namespace Eigen;
-
 int main (int argc, char *argv[]) {
 	Size board_sz=Size(8,6); //size of chessboard
 	vector<Point2f> corners; //store points of corners found
@@ -27,8 +23,18 @@ int main (int argc, char *argv[]) {
 	sprintf_s(pattern, 100, "%s%%03d.ply", argv[1]);
 	int modelNum = atoi(argv[2]);
 	bool pfound=false;
+	//define real-world corners that are 8cmx8cm
 	vector<Point2f> rcorners;
-
+	for(int y=0; y<=480; y+=80){
+		for(int x=0; x<=880;x+=80){
+			rcorners.push_back(Point2f(x,y));
+		}
+	}
+	Size vboard_sz=Size(8,6);
+	vector<Point2f> vcorners;
+	Mat pic, pgrey,H, H2;//, greyvid;
+	Size pboard_sz=Size(12,7);
+	vector<Point2f> pcorners;
 	char fname[100];
 	//namedWindow("Video");
 	//namedWindow("Depth");
@@ -40,10 +46,11 @@ int main (int argc, char *argv[]) {
 	//find corners of chessboard using image found on projector
 	Mat grey;
 	cvtColor(proj, grey, CV_RGB2GRAY);
-	bool found = findChessboardCorners(grey,board_sz,corners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE+CALIB_CB_FAST_CHECK);
+	bool found = findChessboardCorners(grey,board_sz,corners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 	if(found){
 		cornerSubPix(grey, corners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 	}
+	cout<<corners;
 	bool search = false;
 	//for each point found in corners in
 	imshow("Projector", proj);
@@ -63,13 +70,10 @@ int main (int argc, char *argv[]) {
      projectorSize.width, projectorSize.height, TRUE);
 	}
 	waitKey(10);
-
 	Mat video(Size(200,200), CV_8UC3);
 	video.setTo(Scalar(128,128,128));
-
 	Mat depth(Size(200,200), CV_8UC1);
 	depth.setTo(Scalar(128,128,128));
-
 	try {
 		Mat H;
 		Kinect& kinect = Kinect::get(0);
@@ -80,34 +84,26 @@ int main (int argc, char *argv[]) {
 		kinect.setAngle(5);
 		bool done = false;
 		while (!done) {
-
 			bool haveVideo = kinect.grabVideoFrame();
-			bool haveDepth = kinect.grabDepthFrame();
-			
+			bool haveDepth = kinect.grabDepthFrame();	
 			if (haveVideo) {
 				kinect.fetchVideoImage(&video);
 				flip(video,video,1);
 			}
-
 			if (haveDepth) {
 				kinect.fetchDepthImage(&depth);
 			}
-
 			if (haveVideo && haveDepth) {
 				int keyPressed = waitKey(1);
 				Mat greyvid;
-				Matrix3f H1;
+				Matrix3f H1,H3;
 				cvtColor(video, greyvid, CV_RGB2GRAY);
 				imshow("g",greyvid);
-
 				imshow("video",video);
 				if (keyPressed == 'q' || keyPressed == 'Q') {
 					done = true;
 				}
 				else if(keyPressed=='y'){
-					Size vboard_sz=Size(8,6);
-					vector<Point2f> vcorners;
-					Mat pic, pgrey;//, greyvid;
 					kinect.fetchVideoImage(&pic);//get current video image to find chessboard corners
 					flip(pic,pic,1);
 					proj=NULL;
@@ -118,15 +114,15 @@ int main (int argc, char *argv[]) {
 					bool vfound = findChessboardCorners(pgrey,vboard_sz,vcorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(vfound){
 						cornerSubPix(pgrey, vcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-						Mat H=findHomography(corners, vcorners, RANSAC);//0,RANSAC,LMEDS, homography between video and image corners
+						H=findHomography(corners, vcorners, RANSAC);//0,RANSAC,LMEDS, homography between video and image corners
+						//H2=findHomography(vcorners,rcorners,RANSAC);
 						for(int i=0;i<H.rows;i++){
 							for(int j=0;j<H.cols;j++){
 								H1(i,j)=H.at<double>(i,j);
+								//H3(i,j)=H2.at<double>(i,j);
 							}
 						}
 						//find corners from the physical chessboard
-						Size pboard_sz=Size(12,7);//(12,7);
-						vector<Point2f> pcorners;
 						search=true;
 						waitKey(4000);
 					}//end vfound
@@ -138,34 +134,31 @@ int main (int argc, char *argv[]) {
 					proj=NULL;
 					imshow("Projector",proj);
 					vector<Point2f> pcorners;
-					pfound = findChessboardCorners(greyvid, Size(12,7), pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+					pfound = findChessboardCorners(greyvid, pboard_sz, pcorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(pfound){
 						cornerSubPix(greyvid, pcorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-						drawChessboardCorners(greyvid, Size(12,7), Mat(pcorners), pfound);
+						drawChessboardCorners(greyvid, pboard_sz, Mat(pcorners), pfound);
 						imshow("i",greyvid);
 						for(Point2f p:pcorners){//for each corner found
 							Vector3f v(p.x,p.y,1);//convert point into vector
-							Vector3f v2(H1.inverse()*v);//multiply vector by homograpy inverse
+							//Vector3f v2(H1.inverse()*H3*v);//multiply vector by homograpy inverse
+							Vector3f v2(H1.inverse()*v);
 							v2/=v2(2);//divide by p(2) - generalize
-							circle(proj,Point2f(v2(0),v2(1)),3,Scalar(0,255,0),3);//print circle on found points
-						//if a is pressed, move dot to right (p.x--)?
-						//if d is pressed, move dot to right (p.x++)?
-						//if w is pressed, move dot up (p.y++)?
+							circle(proj,Point2f(v2(0),v2(1)),3,Scalar(0,255,0),-1);//print circle on found points
+						//if s is pressed, move dot to left (p.x--)?
+						//if f is pressed, move dot to right (p.x++)?
+						//if e is pressed, move dot up (p.y++)?
 						//if x is pressed, move dot down (p.y--)?
-						//if f is pressed, move onto the next point
-													imshow("Projector",proj);
+						//if v is pressed, move onto the next point
+							imshow("Projector",proj);
 						}
-
 					}
 				}
 				else if (keyPressed == ' ') {
-					
 					sprintf_s(fname, 100, "image%04d.png", modelNum+1);
 					imwrite(fname, video);
-
 					sprintf_s(fname, 100, pattern, modelNum++);
 					cout << fname << endl;
-
 					ofstream out(fname);
 					out << "ply\n"
 						<< "format ascii 1.0\n"
@@ -180,10 +173,8 @@ int main (int argc, char *argv[]) {
 						<< "property uchar green\n"
 						<< "property uchar blue\n"
 						<< "end_header\n";
-
 					out << 640 << endl;
-					out << 480 << endl;
-					
+					out << 480 << endl;		
 					Point2d p2d;
 					for (p2d.x = 0; p2d.x < 640; ++p2d.x) {
 						for (p2d.y = 0; p2d.y < 480; ++p2d.y) {
@@ -203,9 +194,7 @@ int main (int argc, char *argv[]) {
 							}
 						}
 					}
-
 					out.close();
-
 				} else if (keyPressed == 'a' || keyPressed == 'A') {
 					kinect.setAngle(angle+2.0);
 					angle = kinect.getAngle();
@@ -221,6 +210,5 @@ int main (int argc, char *argv[]) {
 	catch (kinect_exception) {
 		cerr << "Caught an exception" << endl;
 	}//end catch
-
 	return 0;
 }//end main
