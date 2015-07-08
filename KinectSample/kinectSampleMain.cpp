@@ -87,7 +87,7 @@ int main (int argc, char *argv[]) {
 			bool haveDepth = kinect.grabDepthFrame();	
 			if (haveVideo) {
 				kinect.fetchVideoImage(&video);
-				flip(video,video,1);
+				//flip(video,video,1);
 			}
 			if (haveDepth) {
 				kinect.fetchDepthImage(&depth);
