@@ -33,17 +33,16 @@ int main (int argc, char *argv[]) {
 
 	Size kinect2ProjectorBoard_sz=Size(8,6);
 	vector<Point2f> kinect2ProjectorCorners;
-	Mat projectorImage, greyProjectorImage, homographyImage, greyHomographyImage, projector2KinectHomography, H2, lightImage, darkImage, chessboardImage;//, greyvid;
+	Mat projectorImage, greyProjectorImage, homographyImage, greyHomographyImage, projector2KinectHomography, H2, lightImage, darkImage, chessboardImage, kinect2RealHomography;//, greyvid;
 	Size realBoard_sz=Size(12,7);
 	vector<Point2f> realCorners;
 	char fname[100];
 
-	//namedWindow("Video");
-	//namedWindow("Depth");
 	Size projectorSize(1024,768); //resolution of projector
 	Size mainScreenSize(1920,1080); //resolution of main display
 	namedWindow("Projector");
 	projectorImage=imread("checkerboard.png");
+
 	//find corners of chessboard using image found on projector
 	cvtColor(projectorImage, greyProjectorImage, CV_RGB2GRAY);
 	bool projectorCornersFound = findChessboardCorners(greyProjectorImage,projectorBoard_sz,projectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
@@ -87,7 +86,7 @@ int main (int argc, char *argv[]) {
 			bool haveDepth = kinect.grabDepthFrame();	
 			if (haveVideo) {
 				kinect.fetchVideoImage(&video);
-				//flip(video,video,1);
+				flip(video,video,1);
 			}
 			if (haveDepth) {
 				kinect.fetchDepthImage(&depth);
@@ -95,75 +94,76 @@ int main (int argc, char *argv[]) {
 			if (haveVideo && haveDepth) {
 				int keyPressed = waitKey(1);
 				Mat greyVideo;
-				Matrix3f p2KHomography,H3;
+				Matrix3f p2KHomography,k2RHomography;
 				cvtColor(video, greyVideo, CV_RGB2GRAY);
 				imshow("g",greyVideo);
 				imshow("video",video);
 				if (keyPressed == 'q' || keyPressed == 'Q') {
 					done = true;
 				}
+				//find projected chessboard on real-world plane
 				else if(keyPressed=='f'){
 					kinect.fetchVideoImage(&lightImage);
 					cvtColor(lightImage, lightImage, CV_RGB2GRAY);
+					//flip?
 					projectorImage=NULL;
 					imshow("Projector",projectorImage);
-				light=true;
+					light=true;
 				}
 				else if(keyPressed=='y'&&light){
 					kinect.fetchVideoImage(&darkImage);//get current video image to find kinect2Projector chessboard corners
-					//flip(homographyImage,homographyImage,1);
+					//flip?
 					cvtColor(darkImage, darkImage, CV_RGB2GRAY);
-					//cvtColor(homographyImage, greyHomographyImage, CV_RGB2GRAY);
 					absdiff(lightImage,darkImage,greyHomographyImage);
-					//imshow("y",chessboardImage);
 					imshow("greyImage", greyHomographyImage);
 
+					//find homography between Kinect and Projector
 					//find corners from checkerboard in video image
 					bool kinectFound = findChessboardCorners(greyHomographyImage,kinect2ProjectorBoard_sz,kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
-					if(kinectFound){
-						cout<<"!!";
+					if(kinectFound){//if corners are found
 						cornerSubPix(greyHomographyImage, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						drawChessboardCorners(greyHomographyImage, kinect2ProjectorBoard_sz, Mat(kinect2ProjectorCorners), kinectFound);
-						imshow("greyImage",greyHomographyImage);
+						imshow("greyImage",greyHomographyImage);//show in image
+						//find homography matrix
 						projector2KinectHomography=findHomography(projectorCorners, kinect2ProjectorCorners, RANSAC);//0,RANSAC,LMEDS, homography between video and image corners
 						for(int i=0;i<projector2KinectHomography.rows;i++){
 							for(int j=0;j<projector2KinectHomography.cols;j++){
-								p2KHomography(i,j)=projector2KinectHomography.at<double>(i,j);
+								p2KHomography(i,j)=projector2KinectHomography.at<double>(i,j);//convert to eigen
 							}
 						}
-						//find corners from the physical chessboard
 						k2PHomographyFound=true;
-						waitKey(4000);
-					}//end vfound
+						waitKey(400);
+					}
 					projectorImage=NULL;
 					imshow("Projector", projectorImage);
 				}
-				//find corners on real-world chessboard
+				//if kinect/projector homography found and j is pressed
 				else if(keyPressed=='j'&&k2PHomographyFound==true){
 					projectorImage=NULL;
-					imshow("Projector", projectorImage);
+					imshow("Projector", projectorImage);//no more projector image
 					bool realCornersFound=findChessboardCorners(greyVideo, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+					cout<<realCorners;
 					if(realCornersFound){
 						cornerSubPix(greyVideo, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-						Mat representation2RealHomography=findHomography(representationCorners, realCorners, RANSAC);
-						//drawChessboardCorners(greyVideo, realBoard_sz, Mat(realCorners), realCornersFound);
-						for(int i=0;i<representation2RealHomography.rows;i++){
-							for(int j=0;j<representation2RealHomography.cols;j++){
-								H3(i,j)=representation2RealHomography.at<double>(i,j);
+						kinect2RealHomography=findHomography(realCorners, representationCorners, RANSAC);//find homography
+						imshow("g",greyVideo);
+						for(int i=0;i<kinect2RealHomography.rows;i++){
+							for(int j=0;j<kinect2RealHomography.cols;j++){
+								k2RHomography(i,j)=kinect2RealHomography.at<double>(i,j);//save as eigen matrix
 							}
 						}
-						//imshow("i", greyVideo);
-						for(Point2f point:realCorners){//for each corner found
+						//find homography between projector and real world
+						Matrix3f p2RHomography=k2RHomography.inverse()*p2KHomography;
+						for(Point2f point:realCorners){//for each corner found from Kinect to Real-World chessboard
 							Vector3f point2Vector(point.x,point.y,1);//convert point into vector
-							Vector3f vectorHomography(p2KHomography.inverse()*point2Vector);//multiply vector by homograpy inverse
+							Vector3f vectorHomography(p2RHomography*point2Vector);//multiply vector by homograpy inverse
+							cout<<vectorHomography(0);
+							cout<<"---";
+							cout<<vectorHomography(1);
+							cout<<"---";
 							vectorHomography/=vectorHomography(2);//divide by p(2) - generalize
 							circle(projectorImage,Point2f(vectorHomography(0),vectorHomography(1)),3,Scalar(0,255,0),-1);//print circle on found points
-							//if s is pressed, move dot to left (p.x--)?
-							//if f is pressed, move dot to right (p.x++)?
-							//if e is pressed, move dot up (p.y++)?
-							//if x is pressed, move dot down (p.y--)?
-							//if v is pressed, move onto the next point
-							imshow("Projector",projectorImage);
+							imshow("Projector", projectorImage);
 						}
 					}
 				}
