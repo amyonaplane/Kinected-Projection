@@ -25,9 +25,9 @@ int main (int argc, char *argv[]) {
 
 	//define real-world corners that are 8cmx8cm
 	vector<Point2f> representationCorners;
-	for(int y=0; y<=6; y++){
-		for(int x=0; x<=11;x++){
-			representationCorners.push_back(Point2f(x,y));
+	for(int y=1; y<=7; y++){
+		for(int x=1; x<=12;x++){
+			representationCorners.push_back(Point2f(x,y));//int to flat warning
 		}
 	}
 
@@ -90,6 +90,7 @@ int main (int argc, char *argv[]) {
 			}
 			if (haveDepth) {
 				kinect.fetchDepthImage(&depth);
+				flip(depth,depth,1);
 			}
 			if (haveVideo && haveDepth) {
 				int keyPressed = waitKey(1);
@@ -105,14 +106,14 @@ int main (int argc, char *argv[]) {
 				else if(keyPressed=='f'){
 					kinect.fetchVideoImage(&lightImage);
 					cvtColor(lightImage, lightImage, CV_RGB2GRAY);
-					//flip?
+					flip(lightImage,lightImage,1);
 					projectorImage=NULL;
 					imshow("Projector",projectorImage);
 					light=true;
 				}
 				else if(keyPressed=='y'&&light){
 					kinect.fetchVideoImage(&darkImage);//get current video image to find kinect2Projector chessboard corners
-					//flip?
+					flip(darkImage,darkImage,1);
 					cvtColor(darkImage, darkImage, CV_RGB2GRAY);
 					absdiff(lightImage,darkImage,greyHomographyImage);
 					imshow("greyImage", greyHomographyImage);
@@ -125,7 +126,7 @@ int main (int argc, char *argv[]) {
 						drawChessboardCorners(greyHomographyImage, kinect2ProjectorBoard_sz, Mat(kinect2ProjectorCorners), kinectFound);
 						imshow("greyImage",greyHomographyImage);//show in image
 						//find homography matrix
-						projector2KinectHomography=findHomography(projectorCorners, kinect2ProjectorCorners, RANSAC);//0,RANSAC,LMEDS, homography between video and image corners
+						projector2KinectHomography=findHomography(kinect2ProjectorCorners, projectorCorners, RANSAC);//0,RANSAC,LMEDS, homography between video and image corners
 						for(int i=0;i<projector2KinectHomography.rows;i++){
 							for(int j=0;j<projector2KinectHomography.cols;j++){
 								p2KHomography(i,j)=projector2KinectHomography.at<double>(i,j);//convert to eigen
@@ -142,10 +143,12 @@ int main (int argc, char *argv[]) {
 					projectorImage=NULL;
 					imshow("Projector", projectorImage);//no more projector image
 					bool realCornersFound=findChessboardCorners(greyVideo, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
-					cout<<realCorners;
 					if(realCornersFound){
+						cout<<" homography found ";
+						cout<<representationCorners;
+						cout<<realCorners;
 						cornerSubPix(greyVideo, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-						kinect2RealHomography=findHomography(realCorners, representationCorners, RANSAC);//find homography
+						kinect2RealHomography=findHomography(representationCorners, realCorners, RANSAC);//find homography
 						imshow("g",greyVideo);
 						for(int i=0;i<kinect2RealHomography.rows;i++){
 							for(int j=0;j<kinect2RealHomography.cols;j++){
@@ -153,18 +156,20 @@ int main (int argc, char *argv[]) {
 							}
 						}
 						//find homography between projector and real world
-						Matrix3f p2RHomography=k2RHomography.inverse()*p2KHomography;
-						for(Point2f point:realCorners){//for each corner found from Kinect to Real-World chessboard
+						Matrix3f p2RHomography(k2RHomography.inverse()*p2KHomography);
+						cout<<" p2R stored ";
+						for(Point2f point:realCorners){//for each corner found from Kinect in k2Real-World chessboard
 							Vector3f point2Vector(point.x,point.y,1);//convert point into vector
 							Vector3f vectorHomography(p2RHomography*point2Vector);//multiply vector by homograpy inverse
-							cout<<vectorHomography(0);
-							cout<<"---";
-							cout<<vectorHomography(1);
-							cout<<"---";
 							vectorHomography/=vectorHomography(2);//divide by p(2) - generalize
+							cout<<" x=";
+							cout<<vectorHomography(0);
+							cout<<" y=";
+							cout<<vectorHomography(1);
 							circle(projectorImage,Point2f(vectorHomography(0),vectorHomography(1)),3,Scalar(0,255,0),-1);//print circle on found points
-							imshow("Projector", projectorImage);
+							//imshow("Projector", projectorImage);
 						}
+						imshow("Projector",projectorImage);
 					}
 				}
 				else if (keyPressed == ' ') {
