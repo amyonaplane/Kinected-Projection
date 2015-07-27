@@ -24,12 +24,11 @@ int main (int argc, char *argv[]) {
 	int modelNum = atoi(argv[2]);
 
 	//define real-world corners that are 8cmx8cm
-	vector<Point2f> representationCorners;
-	for(int y=1; y<=7; y++){
-		for(int x=1; x<=12;x++){
-			representationCorners.push_back(Point2f(x,y));//int to flat warning
-		}
-	}
+	//for(int y=1; y<=7; y++){
+	//	for(int x=1; x<=12;x++){
+	//		representationCorners.push_back(Point2f(x,y));//int to flat warning
+	//	}
+	//}
 
 	Size kinect2ProjectorBoard_sz=Size(8,6);
 	vector<Point2f> kinect2ProjectorCorners;
@@ -37,7 +36,13 @@ int main (int argc, char *argv[]) {
 	Size realBoard_sz=Size(12,7);
 	vector<Point2f> realCorners;
 	char fname[100];
-
+		vector<Point2f> representationCorners;
+	Mat chessBoardImage=imread("127chessboard.jpg");
+	cvtColor(chessBoardImage, chessBoardImage, CV_RGB2GRAY);
+	bool imageCornersFound = findChessboardCorners(chessBoardImage,realBoard_sz,representationCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+	if(imageCornersFound){
+		cornerSubPix(chessBoardImage, representationCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+	}
 	Size projectorSize(1024,768); //resolution of projector
 	Size mainScreenSize(1920,1080); //resolution of main display
 	namedWindow("Projector");
@@ -77,7 +82,7 @@ int main (int argc, char *argv[]) {
 		kinect.openVideoStream(Kinect::RESOLUTION_640x480);
 		kinect.openDepthStream(Kinect::RESOLUTION_640x480);
 		kinect.setDepthMode(Kinect::DEPTH_MODE_NEAR);
-		double angle = 5;
+		int angle = 5;
 		kinect.setAngle(5);
 		bool done = false;
 		bool light = false;
@@ -98,7 +103,7 @@ int main (int argc, char *argv[]) {
 				Matrix3f p2KHomography,k2RHomography;
 				cvtColor(video, greyVideo, CV_RGB2GRAY);
 				imshow("g",greyVideo);
-				imshow("video",video);
+				//imshow("video",video);
 				if (keyPressed == 'q' || keyPressed == 'Q') {
 					done = true;
 				}
@@ -116,8 +121,9 @@ int main (int argc, char *argv[]) {
 					flip(darkImage,darkImage,1);
 					cvtColor(darkImage, darkImage, CV_RGB2GRAY);
 					absdiff(lightImage,darkImage,greyHomographyImage);
-					imshow("greyImage", greyHomographyImage);
-
+					//imshow("greyImage", greyHomographyImage);
+					imshow("light", lightImage);
+					imshow("dark", darkImage);
 					//find homography between Kinect and Projector
 					//find corners from checkerboard in video image
 					bool kinectFound = findChessboardCorners(greyHomographyImage,kinect2ProjectorBoard_sz,kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
@@ -127,6 +133,9 @@ int main (int argc, char *argv[]) {
 						imshow("greyImage",greyHomographyImage);//show in image
 						//find homography matrix
 						projector2KinectHomography=findHomography(kinect2ProjectorCorners, projectorCorners, RANSAC);//0,RANSAC,LMEDS, homography between video and image corners
+						//cvtColor(projector2KinectHomography, projector2KinectHomography, CV_RGB2GRAY);
+						//Mat hTest1=greyHomographyImage*projector2KinectHomography;
+						//imshow("test1",hTest1);
 						for(int i=0;i<projector2KinectHomography.rows;i++){
 							for(int j=0;j<projector2KinectHomography.cols;j++){
 								p2KHomography(i,j)=projector2KinectHomography.at<double>(i,j);//convert to eigen
@@ -156,7 +165,7 @@ int main (int argc, char *argv[]) {
 							}
 						}
 						//find homography between projector and real world
-						Matrix3f p2RHomography(k2RHomography.inverse()*p2KHomography);
+						Matrix3f p2RHomography(k2RHomography*p2KHomography);
 						cout<<" p2R stored ";
 						for(Point2f point:realCorners){//for each corner found from Kinect in k2Real-World chessboard
 							Vector3f point2Vector(point.x,point.y,1);//convert point into vector
@@ -214,7 +223,7 @@ int main (int argc, char *argv[]) {
 					}
 					out.close();
 				} else if (keyPressed == 'a' || keyPressed == 'A') {
-					kinect.setAngle(angle+2.0);
+					kinect.setAngle(angle+2);
 					angle = kinect.getAngle();
 					cout << "Angle increased to " << angle << endl;
 				} else if (keyPressed == 'z' || keyPressed == 'Z') {
