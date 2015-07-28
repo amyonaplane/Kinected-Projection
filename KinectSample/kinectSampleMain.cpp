@@ -55,7 +55,6 @@ int main (int argc, char *argv[]) {
 	Size mainScreenSize(1920,1080);
 	namedWindow("Projector");
 	imshow("Projector", projectorImage);
-	waitKey(10);
 
 	// Get a Windows handle to the window we made
 	HWND windowHandle = FindWindow(0, "Projector");
@@ -70,7 +69,6 @@ int main (int argc, char *argv[]) {
    MoveWindow(windowHandle, mainScreenSize.width, 0,
      projectorSize.width, projectorSize.height, TRUE);
 	}
-	waitKey(10);
 
 	try {
 		Kinect& kinect = Kinect::get(0);
@@ -109,56 +107,73 @@ int main (int argc, char *argv[]) {
 				if (keyPressed == 'q' || keyPressed == 'Q') {
 					done = true;
 				} 
+
 				else if(keyPressed=='f'){
 					kinect.fetchVideoImage(&lightImage);
 					cvtColor(lightImage, lightImage, CV_RGB2GRAY);
 					flip(lightImage,lightImage,1);
 					projectorImage=NULL;
-					imshow("Projector",projectorImage);
+					imshow("Projector", projectorImage);
 					light=true;
 				}
+
 				else if(keyPressed=='y'&&light){
 					kinect.fetchVideoImage(&darkImage);
 					flip(darkImage,darkImage,1);
 					cvtColor(darkImage, darkImage, CV_RGB2GRAY);
 					absdiff(lightImage,darkImage,greyHomographyImage);
 					Mat greyHomographyCopy=greyHomographyImage;
-					imshow("greyImage", greyHomographyCopy);
-
+					imshow("Projector", projectorImage);
 					bool kinectFound = findChessboardCorners(greyHomographyImage,projectorBoard_sz,kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(kinectFound){
 						cornerSubPix(greyHomographyCopy, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						drawChessboardCorners(greyHomographyImage, projectorBoard_sz, Mat(kinect2ProjectorCorners), kinectFound);
-
 						projector2KinectHomography=findHomography(kinect2ProjectorCorners, projectorCorners, RANSAC);
-						projector2KinectHomography.convertTo(projector2KinectHomography,CV_32FC2);
-						warpPerspective(greyHomographyImage, greyHomographyImage, projector2KinectHomography, projectorSize);//size?
+						//convert to Eigen
+						for(int i=0;i<projector2KinectHomography.rows;i++){
+							for(int j=0;j<projector2KinectHomography.cols;j++){
+								p2KHomography(i,j)=projector2KinectHomography.at<double>(i,j);//convert to eigen
+							}
+						}
+						warpPerspective(greyHomographyImage, greyHomographyImage, projector2KinectHomography, projectorSize);
 						imshow("homography",greyHomographyImage);
 						k2PHomographyFound=true;
-						waitKey(400);
 					}
-					projectorImage=NULL;
-					imshow("Projector", projectorImage);
 				}
+
 				//cover the lens
 				else if(keyPressed=='j'&&k2PHomographyFound==true){
+					projectorImage=NULL;
 					bool realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(realCornersFound){
-						cout<<" homography found ";
-						Mat greyVideo;
 						cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						kinect2RealHomography=findHomography(realCorners, representationCorners, RANSAC);//find homography
-						kinect2RealHomography.convertTo(kinect2RealHomography,CV_32FC2);
-						warpPerspective(video, greyVideo, kinect2RealHomography, projectorSize);//size?
-						imshow("homography vid",greyVideo);
+						//convert to Eigen
+						for(int i=0;i<kinect2RealHomography.rows;i++){
+							for(int j=0;j<kinect2RealHomography.cols;j++){
+								k2RHomography(i,j)=kinect2RealHomography.at<double>(i,j);//save as eigen matrix
+							}
+						}
+						//Mat greyVideo;
+						//warpPerspective(video, greyVideo, kinect2RealHomography, projectorSize);
+						//imshow("homography vid",greyVideo);
+						Matrix3f p2RHomography(k2RHomography.inverse()*p2KHomography);
+						for(Point2f point:realCorners){//for each corner found from Kinect in k2Real-World chessboard
+							Vector3f point2Vector(point.x,point.y,1);//convert point into vector
+							Vector3f vectorHomography(p2RHomography*point2Vector);//multiply vector by homograpy inverse
+							vectorHomography/=vectorHomography(2);//divide by p(2) - generalize
+							cout<<vectorHomography(0)<<" ";
+							cout<<vectorHomography(1)<<endl;
+							circle(projectorImage,Point2f(vectorHomography(0),vectorHomography(1)),3,Scalar(0,255,0),3);//print circle on found points
+						}
+						imshow("Projector", projectorImage);
 					}
 				}
 			}
 		}
-
-	} catch (kinect_exception) {
+	} 
+	catch (kinect_exception) {
 		std::cerr << "Caught an exception" << std::endl;
 	}
-
 	return 0;
 }
