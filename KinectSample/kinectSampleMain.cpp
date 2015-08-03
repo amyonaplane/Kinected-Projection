@@ -123,7 +123,6 @@ int main (int argc, char *argv[]) {
 					cvtColor(darkImage, darkImage, CV_RGB2GRAY);
 					absdiff(lightImage,darkImage,greyHomographyImage);
 					Mat greyHomographyCopy=greyHomographyImage;
-					//imshow("Projector", projectorImage);
 					bool kinectFound = findChessboardCorners(greyHomographyImage,projectorBoard_sz,kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(kinectFound){
 						cornerSubPix(greyHomographyCopy, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
@@ -141,11 +140,10 @@ int main (int argc, char *argv[]) {
 					}
 				}
 
-				//cover the lens
+				//if not working originally, cover the lens
 				else if(keyPressed=='j'&&k2PHomographyFound==true){
 					bool realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(realCornersFound){
-						//projectorImage=NULL;
 						cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						kinect2RealHomography=findHomography(realCorners, representationCorners, RANSAC);//find homography
 						//convert to Eigen
@@ -158,9 +156,9 @@ int main (int argc, char *argv[]) {
 						warpPerspective(video, greyVideo, kinect2RealHomography, projectorSize);
 						imshow("homography vid",greyVideo);
 						Matrix3f p2RHomography(p2KHomography*k2RHomography.inverse());
-						Mat p2R=projector2KinectHomography*kinect2RealHomography.inv();
-						warpPerspective(chessBoardImage, chessBoardImage, p2R, projectorSize);
-						imshow("hvid",chessBoardImage);
+						//Mat p2R=projector2KinectHomography*kinect2RealHomography.inv();
+						//warpPerspective(chessBoardImage, chessBoardImage, p2R, projectorSize);
+						//imshow("hvid",chessBoardImage);
 						for(Point2f point:representationCorners){//for each corner found from Kinect in k2Real-World chessboard
 							Vector3f point2Vector(point.x,point.y,1);//convert point into vector
 							Vector3f vectorHomography(p2RHomography*point2Vector);//multiply vector by homograpy inverse
