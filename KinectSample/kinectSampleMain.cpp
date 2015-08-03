@@ -28,7 +28,7 @@ int main (int argc, char *argv[]) {
 	Mat depth(cv::Size(200,200), CV_8UC1);
 	depth.setTo(cv::Scalar(128,128,128));
 
-	Mat lightImage, darkImage, greyHomographyImage, projector2KinectHomography, kinect2RealHomography;
+	Mat lightImage, darkImage, greyHomographyImage, projector2KinectHomography, kinect2RealHomography, grey;
 
 	vector<Point2f> kinect2ProjectorCorners, projectorCorners, representationCorners, realCorners;
 
@@ -45,10 +45,10 @@ int main (int argc, char *argv[]) {
 	}
 
 	Mat projectorImage=imread("checkerboard.png");
-	cvtColor(projectorImage,projectorImage, CV_RGB2GRAY);
-	projectorCornersFound = findChessboardCorners(projectorImage,projectorBoard_sz,projectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+	cvtColor(projectorImage,grey, CV_RGB2GRAY);
+	projectorCornersFound = findChessboardCorners(grey,projectorBoard_sz,projectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 	if(projectorCornersFound){
-		cornerSubPix(projectorImage, projectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+		cornerSubPix(grey, projectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 	}
 
 	Size projectorSize(1024,768);
@@ -123,7 +123,7 @@ int main (int argc, char *argv[]) {
 					cvtColor(darkImage, darkImage, CV_RGB2GRAY);
 					absdiff(lightImage,darkImage,greyHomographyImage);
 					Mat greyHomographyCopy=greyHomographyImage;
-					imshow("Projector", projectorImage);
+					//imshow("Projector", projectorImage);
 					bool kinectFound = findChessboardCorners(greyHomographyImage,projectorBoard_sz,kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(kinectFound){
 						cornerSubPix(greyHomographyCopy, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
@@ -143,9 +143,9 @@ int main (int argc, char *argv[]) {
 
 				//cover the lens
 				else if(keyPressed=='j'&&k2PHomographyFound==true){
-					projectorImage=NULL;
 					bool realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(realCornersFound){
+						//projectorImage=NULL;
 						cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						kinect2RealHomography=findHomography(realCorners, representationCorners, RANSAC);//find homography
 						//convert to Eigen
@@ -154,11 +154,14 @@ int main (int argc, char *argv[]) {
 								k2RHomography(i,j)=kinect2RealHomography.at<double>(i,j);//save as eigen matrix
 							}
 						}
-						//Mat greyVideo;
-						//warpPerspective(video, greyVideo, kinect2RealHomography, projectorSize);
-						//imshow("homography vid",greyVideo);
-						Matrix3f p2RHomography(k2RHomography.inverse()*p2KHomography);
-						for(Point2f point:realCorners){//for each corner found from Kinect in k2Real-World chessboard
+						Mat greyVideo;
+						warpPerspective(video, greyVideo, kinect2RealHomography, projectorSize);
+						imshow("homography vid",greyVideo);
+						Matrix3f p2RHomography(p2KHomography*k2RHomography.inverse());
+						Mat p2R=projector2KinectHomography*kinect2RealHomography.inv();
+						warpPerspective(chessBoardImage, chessBoardImage, p2R, projectorSize);
+						imshow("hvid",chessBoardImage);
+						for(Point2f point:representationCorners){//for each corner found from Kinect in k2Real-World chessboard
 							Vector3f point2Vector(point.x,point.y,1);//convert point into vector
 							Vector3f vectorHomography(p2RHomography*point2Vector);//multiply vector by homograpy inverse
 							vectorHomography/=vectorHomography(2);//divide by p(2) - generalize
