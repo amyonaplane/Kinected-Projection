@@ -159,8 +159,8 @@ int main (int argc, char *argv[]) {
 				}
 
 				else if(keyPressed=='t'&&k2PHomographyFound==true){
-					kinectPoints.push_back(kinect2ProjectorCorners);
-					if(kinectPoints.size()==3){
+					projectorPoints.push_back(kinect2ProjectorCorners);
+					if([projectorPoints.size()==3){
 						cout<<"3 Found";
 					}
 				}
