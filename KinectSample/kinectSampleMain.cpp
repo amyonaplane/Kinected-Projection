@@ -58,9 +58,9 @@ int main (int argc, char *argv[]) {
 	}
 
 	//create vector of vectors for image points found from Kinect
-	vector<vector<Point2f>>kinectPoints(30);
+	vector<vector<Point2f>>kinectPoints;
 	//create vector of vectors for image points found from projector
-	vector<vector<Point2f>>projectorPoints(30);
+	vector<vector<Point2f>>projectorPoints;
 
 	Mat projectorImage=imread("checkerboard.png");
 	cvtColor(projectorImage,grey, CV_RGB2GRAY);
@@ -152,9 +152,16 @@ int main (int argc, char *argv[]) {
 								p2KHomography(i,j)=projector2KinectHomography.at<double>(i,j);//convert to eigen
 							}
 						}
-						warpPerspective(greyHomographyImage, greyHomographyImage, projector2KinectHomography, projectorSize);
-						imshow("homography",greyHomographyImage);
+						//warpPerspective(greyHomographyImage, greyHomographyImage, projector2KinectHomography, projectorSize);
+					//	imshow("homography",greyHomographyImage);
 						k2PHomographyFound=true;
+					}
+				}
+
+				else if(keyPressed=='t'&&k2PHomographyFound==true){
+					kinectPoints.push_back(kinect2ProjectorCorners);
+					if(kinectPoints.size()==3){
+						cout<<"3 Found";
 					}
 				}
 
