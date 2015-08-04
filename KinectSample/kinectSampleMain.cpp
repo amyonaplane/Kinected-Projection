@@ -44,6 +44,24 @@ int main (int argc, char *argv[]) {
 		cornerSubPix(chessBoardImage, representationCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 	}
 
+	//create object points of real-world chessboard representation to be used in calibration
+	vector<vector<Point3f>>objectPoints;
+	vector<Point3f>vecPoints;
+
+	//change Point2f into Point3f
+	for(int i=0;i<representationCorners.size();i++){
+		Point3f point2fToPoint3f(representationCorners[i].x, representationCorners[i].y,1);
+		vecPoints.push_back(point2fToPoint3f);
+	}
+	for(int j=0;j<30;j++){
+		objectPoints.push_back(vecPoints);
+	}
+
+	//create vector of vectors for image points found from Kinect
+	vector<vector<Point2f>>kinectPoints(30);
+	//create vector of vectors for image points found from projector
+	vector<vector<Point2f>>projectorPoints(30);
+
 	Mat projectorImage=imread("checkerboard.png");
 	cvtColor(projectorImage,grey, CV_RGB2GRAY);
 	projectorCornersFound = findChessboardCorners(grey,projectorBoard_sz,projectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
