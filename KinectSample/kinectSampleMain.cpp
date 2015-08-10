@@ -126,51 +126,60 @@ int main (int argc, char *argv[]) {
 					done = true;
 				} 
 
-				else if(keyPressed=='f'){
+				/*else if(keyPressed=='f'){
 					kinect.fetchVideoImage(&lightImage);
 					cvtColor(lightImage, lightImage, CV_RGB2GRAY);
 					flip(lightImage,lightImage,1);
 					projectorImage=NULL;
 					imshow("Projector", projectorImage);
 					light=true;
-				}
+				}*/
 
-				else if(keyPressed=='y'&&light){
-					kinect.fetchVideoImage(&darkImage);
-					flip(darkImage,darkImage,1);
-					cvtColor(darkImage, darkImage, CV_RGB2GRAY);
-					absdiff(lightImage,darkImage,greyHomographyImage);
-					Mat greyHomographyCopy=greyHomographyImage;
-					bool kinectFound = findChessboardCorners(greyHomographyImage,projectorBoard_sz,kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
-					if(kinectFound){
-						cornerSubPix(greyHomographyCopy, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-						drawChessboardCorners(greyHomographyImage, projectorBoard_sz, Mat(kinect2ProjectorCorners), kinectFound);
-						projector2KinectHomography=findHomography(kinect2ProjectorCorners, projectorCorners, RANSAC);
+				else if(keyPressed=='y'){//&&light){
+					while(projectorPoints.size()<5){
+						kinect.fetchVideoImage(&darkImage);
+						flip(darkImage,darkImage,1);
+						//cvtColor(darkImage, darkImage, CV_RGB2GRAY);
+						cvtColor(darkImage, greyHomographyImage, CV_RGB2GRAY);
+						//absdiff(lightImage,darkImage,greyHomographyImage);
+						Mat greyHomographyCopy=greyHomographyImage;
+						bool kinectFound = findChessboardCorners(greyHomographyImage, projectorBoard_sz,kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+						if(kinectFound){
+							cornerSubPix(greyHomographyCopy, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+							//drawChessboardCorners(greyHomographyImage, realBoard_sz, Mat(kinect2ProjectorCorners), kinectFound);
+							//add Kinect corners found for different positions
+							projectorPoints.push_back(kinect2ProjectorCorners);
+							cout<<"Next ";
+							if(projectorPoints.size()==5){
+								cout<<"Five projector points Found";
+							}
+						//projector2KinectHomography=findHomography(kinect2ProjectorCorners, projectorCorners, RANSAC);
 						//convert to Eigen
-						for(int i=0;i<projector2KinectHomography.rows;i++){
+						/*for(int i=0;i<projector2KinectHomography.rows;i++){
 							for(int j=0;j<projector2KinectHomography.cols;j++){
 								p2KHomography(i,j)=projector2KinectHomography.at<double>(i,j);//convert to eigen
 							}
 						}
-						//warpPerspective(greyHomographyImage, greyHomographyImage, projector2KinectHomography, projectorSize);
-					//	imshow("homography",greyHomographyImage);
-						k2PHomographyFound=true;
-					}
-				}
-
-				else if(keyPressed=='t'&&k2PHomographyFound==true){
-					projectorPoints.push_back(kinect2ProjectorCorners);
-					if([projectorPoints.size()==3){
-						cout<<"3 Found";
+						warpPerspective(greyHomographyImage, greyHomographyImage, projector2KinectHomography, projectorSize);
+						imshow("homography",greyHomographyImage);*/
+							k2PHomographyFound=true;
+						}
+						waitKey(5000);
 					}
 				}
 
 				//if not working originally, cover the lens
-				else if(keyPressed=='j'&&k2PHomographyFound==true){
+				else if(keyPressed=='j'){//&&k2PHomographyFound==true){
+					while(kinectPoints.size()<5){
 					bool realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(realCornersFound){
 						cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-						kinect2RealHomography=findHomography(realCorners, representationCorners, RANSAC);//find homography
+						kinectPoints.push_back(kinect2ProjectorCorners);
+						cout<<kinectPoints.size()<<" ";
+						if(kinectPoints.size()==5){
+							cout<<" Five Kinect points Found";
+						}
+						/*kinect2RealHomography=findHomography(realCorners, representationCorners, RANSAC);//find homography
 						//convert to Eigen
 						for(int i=0;i<kinect2RealHomography.rows;i++){
 							for(int j=0;j<kinect2RealHomography.cols;j++){
@@ -181,9 +190,9 @@ int main (int argc, char *argv[]) {
 						warpPerspective(video, greyVideo, kinect2RealHomography, projectorSize);
 						imshow("homography vid",greyVideo);
 						Matrix3f p2RHomography(p2KHomography*k2RHomography.inverse());
-						//Mat p2R=projector2KinectHomography*kinect2RealHomography.inv();
-						//warpPerspective(chessBoardImage, chessBoardImage, p2R, projectorSize);
-						//imshow("hvid",chessBoardImage);
+						Mat p2R=projector2KinectHomography*kinect2RealHomography.inv();
+						warpPerspective(chessBoardImage, chessBoardImage, p2R, projectorSize);
+						imshow("hvid",chessBoardImage);
 						for(Point2f point:representationCorners){//for each corner found from Kinect in k2Real-World chessboard
 							Vector3f point2Vector(point.x,point.y,1);//convert point into vector
 							Vector3f vectorHomography(p2RHomography*point2Vector);//multiply vector by homograpy inverse
@@ -192,7 +201,9 @@ int main (int argc, char *argv[]) {
 							cout<<vectorHomography(1)<<endl;
 							circle(projectorImage,Point2f(vectorHomography(0),vectorHomography(1)),3,Scalar(0,255,0),3);//print circle on found points
 						}
-						imshow("Projector", projectorImage);
+						imshow("Projector", projectorImage);*/
+						waitKey(5000);
+					}
 					}
 				}
 			}
