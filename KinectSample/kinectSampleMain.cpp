@@ -136,20 +136,31 @@ int main (int argc, char *argv[]) {
 				}*/
 
 				else if(keyPressed=='y'){//&&light){
-					while(projectorPoints.size()<5){
+					//while(projectorPoints.size()<5){
 						kinect.fetchVideoImage(&darkImage);
 						flip(darkImage,darkImage,1);
-						//cvtColor(darkImage, darkImage, CV_RGB2GRAY);
-						cvtColor(darkImage, greyHomographyImage, CV_RGB2GRAY);
-						//absdiff(lightImage,darkImage,greyHomographyImage);
+						cvtColor(darkImage, darkImage, CV_RGB2GRAY);
+						projectorImage=NULL;
+						imshow("r",darkImage);
+						imshow("Projector", projectorImage);
+						cout<<"darkimage ";
+						waitKey(40000);
+						cout<<"lightimage ";
+						kinect.fetchVideoImage(&lightImage);
+						flip(lightImage,lightImage,1);
+						cvtColor(lightImage, lightImage, CV_RGB2GRAY);
+						imshow("y",lightImage);
+						absdiff(darkImage,lightImage,greyHomographyImage);
 						Mat greyHomographyCopy=greyHomographyImage;
-						bool kinectFound = findChessboardCorners(greyHomographyImage, projectorBoard_sz,kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+						imshow("w",greyHomographyCopy);
+						bool kinectFound = findChessboardCorners(greyHomographyImage, projectorBoard_sz, kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+						cout<<kinectFound<<" ";
 						if(kinectFound){
 							cornerSubPix(greyHomographyCopy, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 							//drawChessboardCorners(greyHomographyImage, realBoard_sz, Mat(kinect2ProjectorCorners), kinectFound);
 							//add Kinect corners found for different positions
 							projectorPoints.push_back(kinect2ProjectorCorners);
-							cout<<"Next ";
+							cout<<projectorPoints.size()<<" ";
 							if(projectorPoints.size()==5){
 								cout<<"Five projector points Found";
 							}
@@ -164,8 +175,10 @@ int main (int argc, char *argv[]) {
 						imshow("homography",greyHomographyImage);*/
 							k2PHomographyFound=true;
 						}
-						waitKey(5000);
-					}
+					//	waitKey(5000);
+					//	projectorImage=imread("checkerboard.png");
+					//	imshow("Projector", projectorImage);
+					//}
 				}
 
 				//if not working originally, cover the lens
