@@ -30,17 +30,14 @@ int main (int argc, char *argv[]) {
 
 	Mat lightImage, darkImage, greyHomographyImage, projector2KinectHomography, kinect2RealHomography, grey, kinectDistortCoeff, projectorDistortCoeff, objectKinectMat, objectProjectorMat;
 	vector<Mat> kinectRvect, kinectTvect, projectorRvect, projectorTvect;
-
 	vector<Point2f> kinect2ProjectorCorners, projectorCorners, representationCorners, realCorners;
 
 	Size projectorBoard_sz=Size(8,6);
 	Size realBoard_sz=Size(12,7);
 
-	bool imageCornersFound, projectorCornersFound;
-
 	Mat chessBoardImage=imread("127chessboard.jpg");
 	cvtColor(chessBoardImage,chessBoardImage, CV_RGB2GRAY);
-	imageCornersFound = findChessboardCorners(chessBoardImage,realBoard_sz,representationCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+	bool imageCornersFound = findChessboardCorners(chessBoardImage,realBoard_sz,representationCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 	if(imageCornersFound){
 		cornerSubPix(chessBoardImage, representationCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 	}
@@ -57,7 +54,6 @@ int main (int argc, char *argv[]) {
 	for(int j=0;j<20;j++){
 		objectPoints.push_back(vecPoints);
 	}
-	//cout<<objectPoints.at(0);
 
 	//create vector of vectors for image points found from Kinect
 	vector<vector<Point2f>>kinectPoints;
@@ -66,7 +62,7 @@ int main (int argc, char *argv[]) {
 
 	Mat projectorImage=imread("checkerboard.png");
 	cvtColor(projectorImage,grey, CV_RGB2GRAY);
-	projectorCornersFound = findChessboardCorners(grey,projectorBoard_sz,projectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
+	bool projectorCornersFound = findChessboardCorners(grey,projectorBoard_sz,projectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 	if(projectorCornersFound){
 		cornerSubPix(grey, projectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 	}
@@ -80,22 +76,21 @@ int main (int argc, char *argv[]) {
 	HWND windowHandle = FindWindow(0, "Projector");
 	if (!windowHandle) {
 		cout << "Couldn't find window" << std::endl;
-	} else {
-   // Make the window full screen with no border or title,e tc.
-   SetWindowLongPtr(windowHandle, GWL_STYLE, WS_SYSMENU | 	
-     WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE);
+	} 
+	else {
+		// Make the window full screen with no border or title,e tc.
+		SetWindowLongPtr(windowHandle, GWL_STYLE, WS_SYSMENU | WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE);
 
-   // Shift the window so it is just to the right of the main screen
-   MoveWindow(windowHandle, mainScreenSize.width, 0,
-     projectorSize.width, projectorSize.height, TRUE);
+		//Shift the window so it is just to the right of the main screen
+		MoveWindow(windowHandle, mainScreenSize.width, 0, projectorSize.width, projectorSize.height, TRUE);
 	}
 
 	try {
 		Kinect& kinect = Kinect::get(0);
 		kinect.openVideoStream(Kinect::RESOLUTION_640x480);
 		kinect.openDepthStream(Kinect::RESOLUTION_640x480);
-
 		kinect.setDepthMode(Kinect::DEPTH_MODE_NEAR);
+	
 		double angle = 5;
 		kinect.setAngle(5);
 		
