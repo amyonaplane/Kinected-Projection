@@ -28,7 +28,8 @@ int main (int argc, char *argv[]) {
 	Mat depth(cv::Size(200,200), CV_8UC1);
 	depth.setTo(cv::Scalar(128,128,128));
 
-	Mat lightImage, darkImage, greyHomographyImage, projector2KinectHomography, kinect2RealHomography, grey, kinectDistortCoeff, projectorDistortCoeff, objectKinectMat, objectProjectorMat;
+	Mat lightImage, darkImage, greyHomographyImage, projector2KinectHomography, kinect2RealHomography, grey, kinectDistortCoeff, projectorDistortCoeff, objectKinectMat, objectProjectorMat,
+		stereoR, stereoT, stereoE, stereoF;
 	vector<Mat> kinectRvect, kinectTvect, projectorRvect, projectorTvect;
 	vector<Point2f> kinect2ProjectorCorners, projectorCorners, representationCorners, realCorners;
 
@@ -142,22 +143,14 @@ int main (int argc, char *argv[]) {
 						bool kinectFound = findChessboardCorners(greyHomographyImage, projectorBoard_sz, kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 						if(kinectFound){
 							cornerSubPix(greyHomographyCopy, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+							projector2KinectHomography=findHomography(kinect2ProjectorCorners, projectorCorners, RANSAC);
 							projectorPoints.push_back(kinect2ProjectorCorners);
 							cout<<projectorPoints.size()<<" ";
-							if(projectorPoints.size()==20){
+							if(projectorPoints.size()==2){
 								cout<<"Twenty projector points Found";
-								//calibrateCamera(objectPoints, projectorPoints, Size(640,480), objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
+								calibrateCamera(objectPoints, projectorPoints, Size(640,480), objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
 								projectorImage=NULL;
 							}
-							//projector2KinectHomography=findHomography(kinect2ProjectorCorners, projectorCorners, RANSAC);
-							//convert to Eigen
-							/*for(int i=0;i<projector2KinectHomography.rows;i++){
-							for(int j=0;j<projector2KinectHomography.cols;j++){
-								p2KHomography(i,j)=projector2KinectHomography.at<double>(i,j);//convert to eigen
-							}
-						}
-						warpPerspective(greyHomographyImage, greyHomographyImage, projector2KinectHomography, projectorSize);
-						imshow("homography",greyHomographyImage);*/
 						}
 						light=false;
 						projectorImage=imread("checkerboard.png");
@@ -176,6 +169,10 @@ int main (int argc, char *argv[]) {
 							cout<<objectKinectMat;
 						}
 					}
+				}
+				else if(keyPressed=='c'&&kinectPoints.size()==20&&projectorPoints.size()==20){
+					double errorValue=stereoCalibrate(objectPoints, kinectPoints, projectorPoints, objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff, stereoR, stereoT, stereoE, stereoF);
+					cout<<errorValue;
 				}
 			}
 		}
