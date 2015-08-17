@@ -44,15 +44,15 @@ int main (int argc, char *argv[]) {
 	}
 
 	//create object points of real-world chessboard representation to be used in calibration
-	vector<vector<Point3f>>objectPoints;
-	vector<Point3f>vecPoints;
+	vector<vector<Point3f>>objectPoints, objectPointsP;
+	vector<Point3f>vecPoints, vecPointsP;
 
 	//change Point2f into Point3f
 	for(int i=0;i<representationCorners.size();i++){
 		Point3f point2fToPoint3f(representationCorners[i].x, representationCorners[i].y,0);
 		vecPoints.push_back(point2fToPoint3f);
 	}
-	for(int j=0;j<20;j++){
+	for(int j=0;j<2;j++){
 		objectPoints.push_back(vecPoints);
 	}
 
@@ -66,6 +66,14 @@ int main (int argc, char *argv[]) {
 	bool projectorCornersFound = findChessboardCorners(grey,projectorBoard_sz,projectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 	if(projectorCornersFound){
 		cornerSubPix(grey, projectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+	}
+
+	for(int i=0;i<projectorCorners.size();i++){
+		Point3f point2fToPoint3f(projectorCorners[i].x, projectorCorners[i].y,0);
+		vecPointsP.push_back(point2fToPoint3f);
+	}
+	for(int j=0;j<2;j++){
+		objectPointsP.push_back(vecPointsP);
 	}
 
 	Size projectorSize(1024,768);
@@ -142,13 +150,14 @@ int main (int argc, char *argv[]) {
 						
 						bool kinectFound = findChessboardCorners(greyHomographyImage, projectorBoard_sz, kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 						if(kinectFound){
-							cornerSubPix(greyHomographyCopy, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+							cornerSubPix(greyHomographyImage, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 							projector2KinectHomography=findHomography(kinect2ProjectorCorners, projectorCorners, RANSAC);
 							projectorPoints.push_back(kinect2ProjectorCorners);
-							cout<<projectorPoints.size()<<" ";
-							if(projectorPoints.size()==2){
-								cout<<"Twenty projector points Found";
-								calibrateCamera(objectPoints, projectorPoints, Size(640,480), objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
+							cout<<"P"<<projectorPoints.size()<<" ";
+							if(projectorPoints.size()==2){//20
+								cout<<"Two projector points Found";
+								calibrateCamera(objectPointsP, projectorPoints, projectorSize, objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
+								cout<<objectProjectorMat;
 								projectorImage=NULL;
 							}
 						}
@@ -163,7 +172,7 @@ int main (int argc, char *argv[]) {
 					if(realCornersFound){
 						cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						kinectPoints.push_back(realCorners);
-						cout<<kinectPoints.size()<<" ";
+						cout<<"K"<<kinectPoints.size()<<" ";
 						if(kinectPoints.size()==20){
 							calibrateCamera(objectPoints, kinectPoints, Size(640,480), objectKinectMat, kinectDistortCoeff, kinectRvect, kinectTvect);
 							cout<<objectKinectMat;
@@ -171,7 +180,7 @@ int main (int argc, char *argv[]) {
 					}
 				}
 				else if(keyPressed=='c'&&kinectPoints.size()==20&&projectorPoints.size()==20){
-					double errorValue=stereoCalibrate(objectPoints, kinectPoints, projectorPoints, objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff, stereoR, stereoT, stereoE, stereoF);
+					double errorValue=stereoCalibrate(objectPoints, kinectPoints, projectorPoints, objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff, Size(640,480), stereoR, stereoT, stereoE, stereoF);
 					cout<<errorValue;
 				}
 			}
