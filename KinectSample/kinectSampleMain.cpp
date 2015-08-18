@@ -126,13 +126,13 @@ int main (int argc, char *argv[]) {
 				} 
 
 				//calibrate the Kinect
-				else if(keyPressed=='z'&&kinectPoints.size()<20){
+				else if(keyPressed=='z'&&kinectPoints.size()<2){
 					bool realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(realCornersFound){
 						cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						kinectPoints.push_back(realCorners);
 						cout<<"K"<<kinectPoints.size()<<" ";
-						if(kinectPoints.size()==20){
+						if(kinectPoints.size()==2){
 							calibrateCamera(objectPoints, kinectPoints, Size(640,480), objectKinectMat, kinectDistortCoeff, kinectRvect, kinectTvect);
 							cout<<objectKinectMat;
 						}
@@ -178,8 +178,10 @@ int main (int argc, char *argv[]) {
 				//if not working originally, cover the lens
 				else if(keyPressed=='j'&&light&&k2PHomographyFound&&projectorPoints.size()<2){
 					realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
-					vector<Point2f>u;
+					
 					if(realCornersFound){
+						vector<Point2f>u;
+						u.clear();
 						cout<<"-k2R found-";
 						cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						kinect2RealHomography=findHomography(realCorners, representationCorners, RANSAC);//find homography
@@ -203,8 +205,6 @@ int main (int argc, char *argv[]) {
 							u.push_back(Point2f(vectorHomography(0),vectorHomography(1)));
 						}
 						projectorPoints.push_back(u);
-						cout<<"P"<<u.size()<<" ";
-						cout<<projectorPoints[0];
 						if(projectorPoints.size()==2){
 							calibrateCamera(objectPoints, projectorPoints, projectorSize, objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
 							cout<<objectProjectorMat;
@@ -225,7 +225,7 @@ int main (int argc, char *argv[]) {
 						projectorImage=imread("checkerboard.png");
 						imshow("Projector", projectorImage);	
 				}
-				else if(keyPressed=='c'&&kinectPoints.size()==20&&projectorPoints.size()==20){
+				else if(keyPressed=='c'&&kinectPoints.size()==2&&projectorPoints.size()==2){
 					double errorValue=stereoCalibrate(objectPoints, kinectPoints, projectorPoints, objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff, Size(640,480), stereoR, stereoT, stereoE, stereoF);
 					cout<<errorValue;
 				}
