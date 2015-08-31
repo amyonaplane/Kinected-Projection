@@ -236,11 +236,24 @@ int main (int argc, char *argv[]) {
 				}
 				else if(keyPressed=='c'&&kinectPoints.size()==20&&projectorPoints.size()==20){
 					double errorValue=stereoCalibrate(objectPoints, kinectPoints, projectorPoints, objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff, Size(640,480), stereoR, stereoT, stereoE, stereoF,CALIB_FIX_INTRINSIC);
-					cout<<"stereoCalibration error valueL"<<errorValue<<endl;
+					cout<<"stereoCalibration error value: "<<errorValue<<endl;
 					stereoRectify(objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff,Size(640,480), stereoR, stereoT, R1, R2, P1, P2, Q);
 					stereoCalibrated=true;
 				}
 				else if(keyPressed=='u'&&stereoCalibrated){
+					Mat greyv, greyd; 
+					GaussianBlur(depth,greyd, Size(3,3),3,3);
+					imshow("Depth", depth);
+					vector<Vec3f> dcircles;
+					HoughCircles(greyd, dcircles, HOUGH_GRADIENT, 1, greyd.rows/8, 20, 15, 30, 45); 
+					for(int i=0;i<dcircles.size();i++){
+						Point2d centerd(cvRound(dcircles[0][0]), cvRound(dcircles[0][1]));
+						int radiusd=cvRound(dcircles[0][2]);
+						circle(greyd, centerd, 3, Scalar(0,255,0),-1,8,0);
+						circle(greyd, centerd, radiusd, Scalar(0,0,255),3,8,0);
+					}
+				imshow("keypoints", greyd);
+				//imshow("Projector",);
 				}
 			}
 		}
