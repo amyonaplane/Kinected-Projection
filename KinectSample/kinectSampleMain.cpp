@@ -29,7 +29,7 @@ int main (int argc, char *argv[]) {
 	depth.setTo(cv::Scalar(128,128,128));
 
 	Mat lightImage, darkImage, greyHomographyImage, projector2KinectHomography, kinect2RealHomography, grey, kinectDistortCoeff, projectorDistortCoeff, objectKinectMat, objectProjectorMat,
-		stereoR, stereoT, stereoE, stereoF;
+		stereoR, stereoT, stereoE, stereoF, R1, R2, P1, P2, Q;
 	vector<Mat> kinectRvect, kinectTvect, projectorRvect, projectorTvect;
 	vector<Point2f> kinect2ProjectorCorners, projectorCorners, representationCorners, realCorners;
 
@@ -99,6 +99,7 @@ int main (int argc, char *argv[]) {
 		bool light = false;
 		bool k2PHomographyFound = false;
 		bool realCornersFound = false;
+		bool stereoCalibrated = false;
 
 		while (!done) {
 
@@ -142,7 +143,7 @@ int main (int argc, char *argv[]) {
 				else if(keyPressed=='d'&&kinectPoints.size()==20){
 					Mat distortvideo;
 					undistort(video, distortvideo, objectKinectMat,kinectDistortCoeff);
-					imshow("distort",distortvideo);
+					imshow("distort", distortvideo);
 				}
 
 				//find projector corners
@@ -163,7 +164,7 @@ int main (int argc, char *argv[]) {
 					Mat greyHomographyCopy=greyHomographyImage;
 					bool kinectFound = findChessboardCorners(greyHomographyImage,projectorBoard_sz,kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(kinectFound){
-						cout<<"-k2P found-";
+						cout<<"-k2P found-"<<endl;
 						cornerSubPix(greyHomographyCopy, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						projector2KinectHomography=findHomography(kinect2ProjectorCorners, projectorCorners, RANSAC);
 						//convert to Eigen
@@ -173,6 +174,7 @@ int main (int argc, char *argv[]) {
 							}
 						}
 						k2PHomographyFound=true;
+						
 					}
 					else{
 						light=false;
@@ -182,13 +184,12 @@ int main (int argc, char *argv[]) {
 				}
 
 				//if not working originally, cover the lens
-				else if(keyPressed=='j'&&light&&k2PHomographyFound&&projectorPoints.size()<2){
-					realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
-					
+				else if(keyPressed=='j'&&light&&k2PHomographyFound&&projectorPoints.size()<20){
+					realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);		
 					if(realCornersFound){
 						vector<Point2f>u;
 						u.clear();
-						cout<<"-k2R found-";
+						cout<<"-k2R found-"<<endl;
 						cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						kinect2RealHomography=findHomography(realCorners, representationCorners, RANSAC);//find homography
 						//convert to Eigen
@@ -211,9 +212,11 @@ int main (int argc, char *argv[]) {
 							u.push_back(Point2f(vectorHomography(0),vectorHomography(1)));
 						}
 						projectorPoints.push_back(u);
+						cout<<"P"<<projectorPoints.size();
 						if(projectorPoints.size()==20){
-							calibrateCamera(objectPoints, projectorPoints, projectorSize, objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
+							double projectCalibrate=calibrateCamera(objectPoints, projectorPoints, projectorSize, objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
 							cout<<objectProjectorMat;
+							cout<<projectCalibrate;
 						}
 						imshow("Projector", projectorImage);
 					}
@@ -233,7 +236,11 @@ int main (int argc, char *argv[]) {
 				}
 				else if(keyPressed=='c'&&kinectPoints.size()==20&&projectorPoints.size()==20){
 					double errorValue=stereoCalibrate(objectPoints, kinectPoints, projectorPoints, objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff, Size(640,480), stereoR, stereoT, stereoE, stereoF,CALIB_FIX_INTRINSIC);
-					cout<<errorValue;
+					cout<<"stereoCalibration error valueL"<<errorValue<<endl;
+					stereoRectify(objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff,Size(640,480), stereoR, stereoT, R1, R2, P1, P2, Q);
+					stereoCalibrated=true;
+				}
+				else if(keyPressed=='u'&&stereoCalibrated){
 				}
 			}
 		}
