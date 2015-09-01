@@ -47,11 +47,14 @@ int main (int argc, char *argv[]) {
 	vector<vector<Point3f>>objectPoints;
 	vector<Point3f>vecPoints;
 
-	//change Point2f into Point3f
-	for(int i=0;i<representationCorners.size();i++){
-		Point3f point2fToPoint3f(representationCorners[i].x, representationCorners[i].y,0);
+	//change Point2f into Point3f ((0,80),
+	for(int i=0;i<560;i+80){
+		for(int k=0;k<880;k+80){
+		Point3f point2fToPoint3f(k,i,0);
 		vecPoints.push_back(point2fToPoint3f);
+		}
 	}
+
 	for(int j=0;j<20;j++){
 		objectPoints.push_back(vecPoints);
 	}
@@ -238,22 +241,27 @@ int main (int argc, char *argv[]) {
 					double errorValue=stereoCalibrate(objectPoints, kinectPoints, projectorPoints, objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff, Size(640,480), stereoR, stereoT, stereoE, stereoF,CALIB_FIX_INTRINSIC);
 					cout<<"stereoCalibration error value: "<<errorValue<<endl;
 					stereoRectify(objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff,Size(640,480), stereoR, stereoT, R1, R2, P1, P2, Q);
+					//stereoR small, stereoT kinda small
 					stereoCalibrated=true;
 				}
-				else if(keyPressed=='u'&&stereoCalibrated){
-					Mat greyv, greyd; 
+				else if(keyPressed=='u'){//&&stereoCalibrated){
+					Mat greyv, greyd, circleProjection; 
 					GaussianBlur(depth,greyd, Size(3,3),3,3);
 					imshow("Depth", depth);
 					vector<Vec3f> dcircles;
+					Point2d centerd;
+					int radiusd=0;
 					HoughCircles(greyd, dcircles, HOUGH_GRADIENT, 1, greyd.rows/8, 20, 15, 30, 45); 
 					for(int i=0;i<dcircles.size();i++){
-						Point2d centerd(cvRound(dcircles[0][0]), cvRound(dcircles[0][1]));
-						int radiusd=cvRound(dcircles[0][2]);
+						centerd=Point2d(cvRound(dcircles[0][0]), cvRound(dcircles[0][1]));
+						radiusd=cvRound(dcircles[0][2]);
 						circle(greyd, centerd, 3, Scalar(0,255,0),-1,8,0);
 						circle(greyd, centerd, radiusd, Scalar(0,0,255),3,8,0);
 					}
-				imshow("keypoints", greyd);
-				//imshow("Projector",);
+					projectorImage=NULL;
+					circle(projectorImage,centerd,radiusd, Scalar(0,0,255),-1,8,0);
+					imshow("keypoints", greyd);
+					imshow("Projector",projectorImage);
 				}
 			}
 		}
