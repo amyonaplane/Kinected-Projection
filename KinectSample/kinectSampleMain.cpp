@@ -47,14 +47,16 @@ int main (int argc, char *argv[]) {
 	vector<vector<Point3f>>objectPoints;
 	vector<Point3f>vecPoints;
 
-	//change Point2f into Point3f ((0,80),
-	for(int i=0;i<560;i+80){
-		for(int k=0;k<880;k+80){
-		Point3f point2fToPoint3f(k,i,0);
-		vecPoints.push_back(point2fToPoint3f);
+//change Point2f into Point3f
+	//for(int i=0;i<84;i++){//size 84
+		for(int y=0;y<560;y+=80){
+			for(int x=0;x<960;x+=80){
+				Point3f point2fToPoint3f(x,y,0);
+				vecPoints.push_back(point2fToPoint3f);
+			    //cout<<point2fToPoint3f<<endl; //(107,97,0),(177,97,0)...(107,167,0)
+			}
 		}
-	}
-
+	//}
 	for(int j=0;j<20;j++){
 		objectPoints.push_back(vecPoints);
 	}
