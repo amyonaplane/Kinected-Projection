@@ -29,12 +29,13 @@ int main (int argc, char *argv[]) {
 	depth.setTo(cv::Scalar(128,128,128));
 
 	Mat lightImage, darkImage, greyHomographyImage, projector2KinectHomography, kinect2RealHomography, grey, kinectDistortCoeff, projectorDistortCoeff, objectKinectMat, objectProjectorMat,
-		stereoR, stereoT, stereoE, stereoF, R1, R2, P1, P2, Q;
+		stereoR, stereoT, stereoE, stereoF, R1, R2, P1, P2, Q, rodriguesMat;
 	vector<Mat> kinectRvect, kinectTvect, projectorRvect, projectorTvect;
 	vector<Point2f> kinect2ProjectorCorners, projectorCorners, representationCorners, realCorners;
 
 	Size projectorBoard_sz=Size(8,6);
 	Size realBoard_sz=Size(12,7);
+	int calibrationSize=2;
 
 	Mat chessBoardImage=imread("127chessboard.jpg");
 	cvtColor(chessBoardImage,chessBoardImage, CV_RGB2GRAY);
@@ -57,7 +58,7 @@ int main (int argc, char *argv[]) {
 			}
 		}
 	//}
-	for(int j=0;j<20;j++){
+	for(int j=0;j<calibrationSize;j++){
 		objectPoints.push_back(vecPoints);
 	}
 
@@ -131,27 +132,22 @@ int main (int argc, char *argv[]) {
 					done = true;
 				} 
 
-				//calibrate the Kinect
-				else if(keyPressed=='z'&&kinectPoints.size()<20){
+				//calibrate the Kinect, make sure the chessboard is close to the Kinect to ensure smallest error value
+				else if(keyPressed=='z'&&kinectPoints.size()<calibrationSize){
 					bool realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(realCornersFound){
 						cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						kinectPoints.push_back(realCorners);
 						cout<<"K"<<kinectPoints.size()<<" ";
-						if(kinectPoints.size()==20){
+						if(kinectPoints.size()==calibrationSize){
 							double kinectCalibrate=calibrateCamera(objectPoints, kinectPoints, Size(640,480), objectKinectMat, kinectDistortCoeff, kinectRvect, kinectTvect);
 							cout<<objectKinectMat;
 							cout<<kinectCalibrate;
 						}
 					}
 				}
-				else if(keyPressed=='d'&&kinectPoints.size()==20){
-					Mat distortvideo;
-					undistort(video, distortvideo, objectKinectMat,kinectDistortCoeff);
-					imshow("distort", distortvideo);
-				}
 
-				//find projector corners
+				//find projector corners, use cloth over the chessboard
 				else if(keyPressed=='f'&&light==false&&k2PHomographyFound==false){
 					kinect.fetchVideoImage(&lightImage);
 					cvtColor(lightImage, lightImage, CV_RGB2GRAY);
@@ -166,11 +162,10 @@ int main (int argc, char *argv[]) {
 					flip(darkImage,darkImage,1);
 					cvtColor(darkImage, darkImage, CV_RGB2GRAY);
 					absdiff(lightImage,darkImage,greyHomographyImage);
-					Mat greyHomographyCopy=greyHomographyImage;
 					bool kinectFound = findChessboardCorners(greyHomographyImage,projectorBoard_sz,kinect2ProjectorCorners,CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
 					if(kinectFound){
 						cout<<"-k2P found-"<<endl;
-						cornerSubPix(greyHomographyCopy, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+						cornerSubPix(greyHomographyImage, kinect2ProjectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						projector2KinectHomography=findHomography(kinect2ProjectorCorners, projectorCorners, RANSAC);
 						//convert to Eigen
 						for(int i=0;i<projector2KinectHomography.rows;i++){
@@ -188,7 +183,7 @@ int main (int argc, char *argv[]) {
 					}
 				}
 
-				//if not working originally, cover the lens
+				//remove cloth and cover the lens
 				else if(keyPressed=='j'&&light&&k2PHomographyFound&&projectorPoints.size()<20){
 					realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);		
 					if(realCornersFound){
@@ -218,7 +213,7 @@ int main (int argc, char *argv[]) {
 						}
 						projectorPoints.push_back(u);
 						cout<<"P"<<projectorPoints.size();
-						if(projectorPoints.size()==20){
+						if(projectorPoints.size()==calibrationSize){
 							double projectCalibrate=calibrateCamera(objectPoints, projectorPoints, projectorSize, objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
 							cout<<objectProjectorMat;
 							cout<<projectCalibrate;
@@ -239,14 +234,16 @@ int main (int argc, char *argv[]) {
 						projectorImage=imread("checkerboard.png");
 						imshow("Projector", projectorImage);	
 				}
-				else if(keyPressed=='c'&&kinectPoints.size()==20&&projectorPoints.size()==20){
-					double errorValue=stereoCalibrate(objectPoints, kinectPoints, projectorPoints, objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff, Size(640,480), stereoR, stereoT, stereoE, stereoF,CALIB_FIX_INTRINSIC);
-					cout<<"stereoCalibration error value: "<<errorValue<<endl;
+				else if(keyPressed=='c'&&kinectPoints.size()==calibrationSize&&projectorPoints.size()==calibrationSize){
+					double errorValue=stereoCalibrate(objectPoints, kinectPoints, projectorPoints, objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff, Size(640,480), stereoR, stereoT, stereoE, stereoF);
+					cout<<"stereoCalibration rms value: "<<errorValue<<endl; //kinect error 0.2 project error 0.16 why is stereo error 23?
 					stereoRectify(objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff,Size(640,480), stereoR, stereoT, R1, R2, P1, P2, Q);
 					//stereoR small, stereoT kinda small
+					cout<<"R: "<<stereoR<<endl;
+					cout<<"T: "<<stereoT<<endl;
 					stereoCalibrated=true;
 				}
-				else if(keyPressed=='u'){//&&stereoCalibrated){
+				else if(keyPressed=='u'&&stereoCalibrated){
 					Mat greyv, greyd, circleProjection; 
 					GaussianBlur(depth,greyd, Size(3,3),3,3);
 					imshow("Depth", depth);
@@ -261,6 +258,8 @@ int main (int argc, char *argv[]) {
 						circle(greyd, centerd, radiusd, Scalar(0,0,255),3,8,0);
 					}
 					projectorImage=NULL;
+					Rodrigues(stereoR,rodriguesMat);
+					rodriguesMat/=stereoT;
 					circle(projectorImage,centerd,radiusd, Scalar(0,0,255),-1,8,0);
 					imshow("keypoints", greyd);
 					imshow("Projector",projectorImage);
