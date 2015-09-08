@@ -35,7 +35,7 @@ int main (int argc, char *argv[]) {
 
 	Size projectorBoard_sz=Size(8,6);
 	Size realBoard_sz=Size(12,7);
-	int calibrationSize=2;
+	int calibrationSize=10;
 
 	Mat chessBoardImage=imread("127chessboard.jpg");
 	cvtColor(chessBoardImage,chessBoardImage, CV_RGB2GRAY);
@@ -49,15 +49,12 @@ int main (int argc, char *argv[]) {
 	vector<Point3f>vecPoints;
 
 //change Point2f into Point3f
-	//for(int i=0;i<84;i++){//size 84
 		for(int y=0;y<560;y+=80){
 			for(int x=0;x<960;x+=80){
 				Point3f point2fToPoint3f(x,y,0);
 				vecPoints.push_back(point2fToPoint3f);
-			    //cout<<point2fToPoint3f<<endl; //(107,97,0),(177,97,0)...(107,167,0)
 			}
 		}
-	//}
 	for(int j=0;j<calibrationSize;j++){
 		objectPoints.push_back(vecPoints);
 	}
@@ -73,6 +70,20 @@ int main (int argc, char *argv[]) {
 	if(projectorCornersFound){
 		cornerSubPix(grey, projectorCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 	}
+
+	ifstream outputFileKI("kinect.txt");
+	vector<Point2f> v;
+	string line_data;
+	double d;
+	//while(getline(outputFileKI,line_data)){
+					//split line from ','
+					//turn string into double
+					//move double to point
+					//move point to kinectPoints
+		//}
+
+					//cout<<kinectPoints[0];
+
 
 	Size projectorSize(1024,768);
 	Size mainScreenSize(1920,1080);
@@ -138,12 +149,19 @@ int main (int argc, char *argv[]) {
 					if(realCornersFound){
 						cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
 						kinectPoints.push_back(realCorners);
+						/*ofstream outputFileKO;
+						outputFileKO.open("kinect2.txt");*/
+
 						cout<<"K"<<kinectPoints.size()<<" ";
 						if(kinectPoints.size()==calibrationSize){
 							double kinectCalibrate=calibrateCamera(objectPoints, kinectPoints, Size(640,480), objectKinectMat, kinectDistortCoeff, kinectRvect, kinectTvect);
 							cout<<objectKinectMat;
 							cout<<kinectCalibrate;
+							/*for(int i=0;i<kinectPoints.size();i++){
+							outputFileKO<<kinectPoints[i]<<endl;
+							}*/
 						}
+						//outputFileKO.close();
 					}
 				}
 
