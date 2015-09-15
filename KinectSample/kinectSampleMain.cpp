@@ -73,7 +73,6 @@ int main (int argc, char *argv[]) {
 
 	//import 20 kinectPoints from file
 	ifstream outputFileKI("kinect.txt");
-	string line;
 	float x,y;
 	char comma;
 	char semicolon;
@@ -88,6 +87,25 @@ int main (int argc, char *argv[]) {
 			kinectPoints.push_back(realCorners);
 			realCorners.clear();
 			cornerSize=0;
+		}
+	}
+
+	//import 20 projectorPoints from file
+	ifstream outputFilePI("projector.txt");
+	float px,py;
+	char pcomma;
+	char psemicolon;
+	int pcornerSize=0;
+	while(outputFilePI>> px>>pcomma >>py>>psemicolon){
+		if(pcornerSize<83){
+			realCorners.push_back(Point2f(px,py));
+			pcornerSize++;
+		}
+		else{
+			realCorners.push_back(Point2f(px,py));
+			projectorPoints.push_back(realCorners);
+			realCorners.clear();
+			pcornerSize=0;
 		}
 	}
 
@@ -170,8 +188,8 @@ int main (int argc, char *argv[]) {
 				}
 				else if(keyPressed=='z'&&kinectPoints.size()==20){
 					double kinectCalibrate=calibrateCamera(objectPoints, kinectPoints, Size(640,480), objectKinectMat, kinectDistortCoeff, kinectRvect, kinectTvect);
-							cout<<objectKinectMat;
-							cout<<kinectCalibrate;
+					cout<<objectKinectMat;
+					cout<<kinectCalibrate;
 				}
 
 				//find projector corners, use cloth over the chessboard
@@ -237,13 +255,21 @@ int main (int argc, char *argv[]) {
 							//cout<<vectorHomography(1)<<endl;
 							circle(projectorImage,Point2f(vectorHomography(0),vectorHomography(1)),3,Scalar(0,255,0),3);//print circle on found points
 							u.push_back(Point2f(vectorHomography(0),vectorHomography(1)));
+							cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
+
 						}
 						projectorPoints.push_back(u);
-						cout<<"P"<<projectorPoints.size();
+
 						if(projectorPoints.size()==calibrationSize){
 							double projectCalibrate=calibrateCamera(objectPoints, projectorPoints, projectorSize, objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
 							cout<<objectProjectorMat;
 							cout<<projectCalibrate;
+							ofstream outputFilePO;
+							outputFilePO.open("projector2.txt");
+							for(int i=0;i<projectorPoints.size();i++){
+								outputFilePO<<projectorPoints[i]<<endl;
+							}
+							cout<<"P"<<projectorPoints.size();
 						}
 						imshow("Projector", projectorImage);
 					}
@@ -261,6 +287,12 @@ int main (int argc, char *argv[]) {
 						projectorImage=imread("checkerboard.png");
 						imshow("Projector", projectorImage);	
 				}
+				else if(keyPressed=='j'&&projectorPoints.size()==20){
+					double projectCalibrate=calibrateCamera(objectPoints, projectorPoints, projectorSize, objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
+					cout<<objectProjectorMat;
+					cout<<projectCalibrate;
+				}
+
 				else if(keyPressed=='c'&&kinectPoints.size()==calibrationSize&&projectorPoints.size()==calibrationSize){
 					double errorValue=stereoCalibrate(objectPoints, kinectPoints, projectorPoints, objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff, Size(640,480), stereoR, stereoT, stereoE, stereoF);
 					cout<<"stereoCalibration rms value: "<<errorValue<<endl; //kinect error 0.2 project error 0.16 why is stereo error 23?
