@@ -166,7 +166,6 @@ int main (int argc, char *argv[]) {
 				if (keyPressed == 'q' || keyPressed == 'Q') {
 					done = true;
 				} 
-
 				//calibrate the Kinect, make sure the chessboard is close to the Kinect to ensure smallest error value
 				else if(keyPressed=='z'&&kinectPoints.size()<calibrationSize){
 					bool realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);
@@ -186,12 +185,12 @@ int main (int argc, char *argv[]) {
 						}
 					}
 				}
+				//if kinect points in text document have been found and recorded
 				else if(keyPressed=='z'&&kinectPoints.size()==20){
 					double kinectCalibrate=calibrateCamera(objectPoints, kinectPoints, Size(640,480), objectKinectMat, kinectDistortCoeff, kinectRvect, kinectTvect);
 					cout<<objectKinectMat;
 					cout<<kinectCalibrate;
 				}
-
 				//find projector corners, use cloth over the chessboard
 				else if(keyPressed=='f'&&light==false&&k2PHomographyFound==false){
 					kinect.fetchVideoImage(&lightImage);
@@ -201,7 +200,6 @@ int main (int argc, char *argv[]) {
 					imshow("Projector", projectorImage);
 					light=true;
 				}
-
 				else if(keyPressed=='y'&&light&&k2PHomographyFound==false){
 					kinect.fetchVideoImage(&darkImage);
 					flip(darkImage,darkImage,1);
@@ -227,7 +225,6 @@ int main (int argc, char *argv[]) {
 						imshow("Projector", projectorImage);
 					}
 				}
-
 				//remove cloth and cover the lens
 				else if(keyPressed=='j'&&light&&k2PHomographyFound&&projectorPoints.size()<20){
 					realCornersFound=findChessboardCorners(video, realBoard_sz, realCorners, CALIB_CB_ADAPTIVE_THRESH+CALIB_CB_NORMALIZE_IMAGE);		
@@ -251,15 +248,11 @@ int main (int argc, char *argv[]) {
 							Vector3f point2Vector(point.x,point.y,1);//convert point into vector
 							Vector3f vectorHomography(p2RHomography*point2Vector);//multiply vector by homograpy inverse
 							vectorHomography/=vectorHomography(2);//divide by p(2) - generalize
-							//cout<<vectorHomography(0)<<" ";
-							//cout<<vectorHomography(1)<<endl;
 							circle(projectorImage,Point2f(vectorHomography(0),vectorHomography(1)),3,Scalar(0,255,0),3);//print circle on found points
 							u.push_back(Point2f(vectorHomography(0),vectorHomography(1)));
 							cornerSubPix(video, realCorners, Size(11,11), Size(-1,-1),TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_EPS,30,0.1));
-
 						}
 						projectorPoints.push_back(u);
-
 						if(projectorPoints.size()==calibrationSize){
 							double projectCalibrate=calibrateCamera(objectPoints, projectorPoints, projectorSize, objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
 							cout<<objectProjectorMat;
@@ -289,21 +282,56 @@ int main (int argc, char *argv[]) {
 				}
 				else if(keyPressed=='j'&&projectorPoints.size()==20){
 					double projectCalibrate=calibrateCamera(objectPoints, projectorPoints, projectorSize, objectProjectorMat, projectorDistortCoeff, projectorRvect, projectorTvect);
-					cout<<objectProjectorMat;
-					cout<<projectCalibrate;
+					cout<<objectProjectorMat<<endl;
+					cout<<projectCalibrate<<endl;
 				}
-
 				else if(keyPressed=='c'&&kinectPoints.size()==calibrationSize&&projectorPoints.size()==calibrationSize){
 					double errorValue=stereoCalibrate(objectPoints, kinectPoints, projectorPoints, objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff, Size(640,480), stereoR, stereoT, stereoE, stereoF);
 					cout<<"stereoCalibration rms value: "<<errorValue<<endl; //kinect error 0.2 project error 0.16 why is stereo error 23?
 					stereoRectify(objectKinectMat, kinectDistortCoeff, objectProjectorMat, projectorDistortCoeff,Size(640,480), stereoR, stereoT, R1, R2, P1, P2, Q);
-					//stereoR small, stereoT kinda small
-					cout<<"R: "<<stereoR<<endl;
-					cout<<"T: "<<stereoT<<endl;
+					//cout<<"R: "<<stereoR<<endl;
+					//cout<<"T: "<<stereoT<<endl;
 					stereoCalibrated=true;
 				}
+				else if(keyPressed=='v'&&stereoCalibrated){
+					//find objects that are 2 meters away and light them up with color
+					//create projection matrix
+					Mat circleProjection=Mat(3,4,CV_64F);
+					for(int ko=0;ko<3;ko++){
+						for(int jo=0;jo<3;jo++){
+							circleProjection.at<double>(ko,jo)=stereoR.at<double>(ko,jo);
+						}
+					}
+						for(int m=0;m<3;m++){
+							circleProjection.at<double>(m,3)=stereoT.at<double>(m,0);
+						}
+					cout<<circleProjection;
+					
+					//if z in any part of depth map is greater than 2
+					Mat imageClone=chessBoardImage.clone();
+					for(int j=0;j<300;j++){
+						for(int k=0;k<300;k++){
+							Point3d kinectPoint=kinect.depth2xyz(Point2d(j,k));
+							if (kinectPoint.z>2){
+								imageClone.at<uchar>(j,k)=128;
+							}
+						}
+					}
+					imshow("Projector",imageClone);
+					//Point3d kinectPoint=kinect.depth2xyz(Point2d(0,0));
+					/*Mat kinectPointMat=Mat(4,1,CV_64F);
+					kinectPointMat.at<double>(0,0)=kinectPoint.x;
+					kinectPointMat.at<double>(1,0)=kinectPoint.y;
+					kinectPointMat.at<double>(2,0)=kinectPoint.z;
+					kinectPointMat.at<double>(3,0)=1;
+					Mat projectPoint=objectProjectorMat*circleProjection*kinectPointMat;
+					Point3d solution(projectPoint);
+					solution/=solution.z;
+					cout<<solution;*/
+				}
+
 				else if(keyPressed=='u'&&stereoCalibrated){
-					Mat greyv, greyd, circleProjection; 
+					Mat greyv, greyd;
 					GaussianBlur(depth,greyd, Size(3,3),3,3);
 					imshow("Depth", depth);
 					vector<Vec3f> dcircles;
@@ -317,9 +345,31 @@ int main (int argc, char *argv[]) {
 						circle(greyd, centerd, radiusd, Scalar(0,0,255),3,8,0);
 					}
 					projectorImage=NULL;
-					Rodrigues(stereoR,rodriguesMat);
-					rodriguesMat/=stereoT;
-					circle(projectorImage,centerd,radiusd, Scalar(0,0,255),-1,8,0);
+					
+					Mat circleProjection=Mat(3,4,CV_64F);
+					for(int ko=0;ko<3;ko++){
+						for(int jo=0;jo<3;jo++){
+							circleProjection.at<double>(ko,jo)=stereoR.at<double>(ko,jo);
+						}
+					}
+					for(int m=0;m<3;m++){
+						circleProjection.at<double>(m,3)=stereoT.at<double>(m,0);
+					}
+
+					Point3d kinectPoint=kinect.depth2xyz(centerd);
+					cout<<"kinect point"<<kinectPoint<<endl;
+					Mat kinectPointMat=Mat(4,1,CV_64F);
+					kinectPointMat.at<double>(0,0)=kinectPoint.x;
+					kinectPointMat.at<double>(1,0)=kinectPoint.y;
+					kinectPointMat.at<double>(2,0)=kinectPoint.z;
+					kinectPointMat.at<double>(3,0)=1;
+					Mat projectPoint=objectProjectorMat*circleProjection*kinectPointMat;
+					Point3d solution(projectPoint);
+					solution/=solution.z;
+					Point s2(solution.x, solution.y);
+					cout<<"s2:"<<s2<<endl;
+
+					circle(projectorImage,s2,radiusd, Scalar(0,0,255),-1,8,0);
 					imshow("keypoints", greyd);
 					imshow("Projector",projectorImage);
 				}
