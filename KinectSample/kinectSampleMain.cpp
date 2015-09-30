@@ -162,6 +162,7 @@ int main (int argc, char *argv[]) {
 				Matrix3f p2KHomography, k2RHomography;
 				cvtColor(video,video,CV_RGB2GRAY);
 				imshow("greyvid",video);
+				imshow("depth",depth);
 
 				if (keyPressed == 'q' || keyPressed == 'Q') {
 					done = true;
@@ -308,12 +309,26 @@ int main (int argc, char *argv[]) {
 					cout<<circleProjection;
 					
 					//if z in any part of depth map is greater than 2
-					Mat imageClone=chessBoardImage.clone();
-					for(int j=0;j<300;j++){
-						for(int k=0;k<300;k++){
+					Mat imageClone=Mat(1024,768,CV_64F);
+					for(int j=0;j<1024;j++){
+						for(int k=0;k<786;k++){
 							Point3d kinectPoint=kinect.depth2xyz(Point2d(j,k));
-							if (kinectPoint.z>2){
+							kinectPoint.x*=100;
+							kinectPoint.y*=100;
+							kinectPoint.z*=100;
+							Mat kinectPointMat=Mat(4,1,CV_64F);
+							kinectPointMat.at<double>(0,0)=kinectPoint.x;
+							kinectPointMat.at<double>(1,0)=kinectPoint.y;
+							kinectPointMat.at<double>(2,0)=kinectPoint.z;
+							kinectPointMat.at<double>(3,0)=1;
+							Mat projectPoint=objectProjectorMat*circleProjection*kinectPointMat;
+							Point3d solution(projectPoint);
+							//solution/=solution.z;
+							if (solution.z>200){
 								imageClone.at<uchar>(j,k)=128;
+							}
+							else{
+								imageClone.at<uchar>(j,k)=0;
 							}
 						}
 					}
@@ -333,7 +348,8 @@ int main (int argc, char *argv[]) {
 				else if(keyPressed=='u'&&stereoCalibrated){
 					Mat greyv, greyd;
 					GaussianBlur(depth,greyd, Size(3,3),3,3);
-					imshow("Depth", depth);
+
+					//imshow("Depth", greyd);
 					vector<Vec3f> dcircles;
 					Point2d centerd;
 					int radiusd=0;
@@ -357,6 +373,9 @@ int main (int argc, char *argv[]) {
 					}
 
 					Point3d kinectPoint=kinect.depth2xyz(centerd);
+					kinectPoint.x*=100;
+					kinectPoint.y*=100;
+					kinectPoint.z*=100;
 					cout<<"kinect point"<<kinectPoint<<endl;
 					Mat kinectPointMat=Mat(4,1,CV_64F);
 					kinectPointMat.at<double>(0,0)=kinectPoint.x;
@@ -365,11 +384,11 @@ int main (int argc, char *argv[]) {
 					kinectPointMat.at<double>(3,0)=1;
 					Mat projectPoint=objectProjectorMat*circleProjection*kinectPointMat;
 					Point3d solution(projectPoint);
+					cout<<"solution:"<<solution<<endl;
 					solution/=solution.z;
 					Point s2(solution.x, solution.y);
 					cout<<"s2:"<<s2<<endl;
-
-					circle(projectorImage,s2,radiusd, Scalar(0,0,255),-1,8,0);
+					circle(projectorImage,s2,radiusd*solution.z, Scalar(0,0,255),-1,8,0);
 					imshow("keypoints", greyd);
 					imshow("Projector",projectorImage);
 				}
